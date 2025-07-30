@@ -136,7 +136,7 @@ export default function ItemPage() {
         <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
           <h2 className="text-2xl font-bold text-red-600 mb-4">Content Not Found</h2>
           <p className="text-gray-600 mb-4">
-            The requested content for "{section || 'unknown'}/{item || 'unknown'}" does not exist or is invalid.
+            The requested content for &quot;{section || 'unknown'}/{item || 'unknown'}&quot; does not exist or is invalid.
           </p>
 
           <div className="text-sm text-gray-500 mb-6">
