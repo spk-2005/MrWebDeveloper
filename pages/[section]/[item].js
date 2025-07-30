@@ -87,7 +87,7 @@ export default function ItemPage() {
         console.log('No section/item in URL, redirecting to default HTML Prerequisites');
         router.replace('/HTML/Prerequisites'); // Use original casing here
     }
-  }, [router.isReady, section, item]);
+  }, [router.isReady, section, item, router]); // Added 'router' to dependencies
 
   // Handler functions for state management
   const handleSetActiveSection = (newSection) => {
