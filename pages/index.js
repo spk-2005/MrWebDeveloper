@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Navbar2 from "./components/Navbar2";
 import { useState, useEffect } from "react";
+import Link from "next/link"; // Import the Link component
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,13 +34,13 @@ export default function Home() {
         <meta name="description" content="Complete web development tutorials covering HTML, CSS, JavaScript, and Tailwind CSS. Learn programming with practical examples and step-by-step guides." />
         <meta name="keywords" content="web development, HTML tutorial, CSS tutorial, JavaScript tutorial, Tailwind CSS, programming tutorials" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        
+
         {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://yourwebsite.com/" />
         <meta property="og:title" content="Learn Web Development - HTML, CSS, JavaScript, Tailwind CSS" />
         <meta property="og:description" content="Complete web development tutorials covering HTML, CSS, JavaScript, and Tailwind CSS." />
-        
+
         {/* Canonical URL */}
         <link rel="canonical" href="https://yourwebsite.com/" />
       </Head>
@@ -62,18 +63,22 @@ export default function Home() {
               Master the fundamentals of web development with our comprehensive tutorials covering HTML, CSS, JavaScript, and Tailwind CSS.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a 
-                href="/html/prerequisites"
-                className="px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
-              >
-                Start Learning HTML
-              </a>
-              <a 
-                href="/css/css-basics"
-                className="px-8 py-4 bg-white text-blue-600 border-2 border-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
-              >
-                Explore CSS
-              </a>
+              {/* Corrected: Use Link component for internal navigation */}
+              <Link href="/HTML/Prerequisites" passHref legacyBehavior>
+                <a
+                  className="px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
+                >
+                  Start Learning HTML
+                </a>
+              </Link>
+              {/* Corrected: Use Link component for internal navigation */}
+              <Link href="/CSS/CSS-Basics" passHref legacyBehavior>
+                <a
+                  className="px-8 py-4 bg-white text-blue-600 border-2 border-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
+                >
+                  Explore CSS
+                </a>
+              </Link>
             </div>
           </div>
 
@@ -81,10 +86,11 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
             {Object.entries(sidebarData).map(([section, items]) => {
               const firstItem = items[0];
-              const sectionSlug = section.toLowerCase();
+              // Ensure sectionSlug retains its original casing for the URL structure Next.js expects from your dynamic routes
+              const sectionSlug = section; // Use original casing for URL
               const itemSlug = firstItem.toLowerCase().replace(/\s+/g, '-');
               const href = `/${sectionSlug}/${itemSlug}`;
-              
+
               const sectionIcons = {
                 'HTML': '🏗️',
                 'CSS': '🎨',
@@ -100,22 +106,28 @@ export default function Home() {
               };
 
               return (
-                <a
+                // Corrected: Use Link component for internal navigation
+                <Link
                   key={section}
                   href={href}
-                  className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 p-6 text-center group"
+                  passHref
+                  legacyBehavior
                 >
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r ${sectionColors[section]} flex items-center justify-center text-2xl text-white group-hover:scale-110 transition-transform`}>
-                    {sectionIcons[section]}
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{section}</h3>
-                  <p className="text-gray-600 mb-4">
-                    {items.length} topics to master
-                  </p>
-                  <div className="text-sm text-gray-500">
-                    Start with: <span className="font-medium text-blue-600">{firstItem}</span>
-                  </div>
-                </a>
+                  <a
+                    className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 p-6 text-center group"
+                  >
+                    <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r ${sectionColors[section]} flex items-center justify-center text-2xl text-white group-hover:scale-110 transition-transform`}>
+                      {sectionIcons[section]}
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{section}</h3>
+                    <p className="text-gray-600 mb-4">
+                      {items.length} topics to master
+                    </p>
+                    <div className="text-sm text-gray-500">
+                      Start with: <span className="font-medium text-blue-600">{firstItem}</span>
+                    </div>
+                  </a>
+                </Link>
               );
             })}
           </div>

@@ -169,10 +169,10 @@ export default function SectionPage() {
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-blue-50 rounded-lg p-6">
                       <h3 className="text-xl font-semibold text-blue-900 mb-3">
-                        📚 What You'll Learn
+                        📚 What You&apos;ll Learn
                       </h3>
                       <p className="text-blue-800">
                         Comprehensive tutorials and examples for {activeSection} development.

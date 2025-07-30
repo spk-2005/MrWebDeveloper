@@ -169,7 +169,7 @@ export default function ItemPage() {
 
   return (
     <>
-      <Head>
+        <Head>
         <title>{activeItem} - {activeSection} Tutorial</title>
         <meta name="description" content={`Learn ${activeItem} in ${activeSection} with detailed examples and explanations`} />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -232,7 +232,7 @@ export default function ItemPage() {
         </div>
 
         <Footer />
-      </div>
+      </div>    
     </>
   );
 }
