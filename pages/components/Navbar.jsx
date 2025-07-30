@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import Image from 'next/image';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,9 +16,7 @@ export default function Navbar() {
       >
         {/* Logo */}
         <div className="flex items-center">
-          {/* Note: In Next.js, for images, you'd typically use the <Image> component from 'next/image' for optimization. */}
-          {/* Example: <Image src='/logo.png' width={100} height={100} alt="Logo" className="rounded transition-transform duration-300 hover:scale-105" /> */}
-          <img
+          <Image
             src='/logo.png'
             width={100}
             height={100}
