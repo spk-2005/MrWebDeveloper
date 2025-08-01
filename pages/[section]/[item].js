@@ -1,17 +1,16 @@
-// ItemPage.js - Enhanced with modern styling and responsive design
-
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { usePostsContext } from '../components/PostContext';
 import Navbar from '../components/Navbar';
 import Navbar2 from '../components/Navbar2';
 import Sidenavbar from '../components/Sidenavbar';
 import Contentpage from '../components/Contentpage';
 import Footer from '../components/Footer';
+import RightSidenavbar from '../components/RightSidenavbar';
 import { 
   ChevronRight, 
   ChevronLeft, 
-  Loader2, 
   AlertTriangle, 
   Menu,
   X,
@@ -19,7 +18,6 @@ import {
   BookOpen,
   Zap
 } from 'lucide-react';
-import RightSidenavbar from '../components/RightSidenavbar';
 
 // Static sidebar data mapping sections to their respective items
 const sidebarData = {
@@ -29,12 +27,11 @@ const sidebarData = {
   'Tailwind': ['Installation', 'Utility Classes', 'Responsive Design', 'Components', 'Customization']
 };
 
-// Helper function to convert URL section to proper section name
+// Helper functions
 const getSectionFromUrl = (sectionSlug) => {
   return Object.keys(sidebarData).includes(sectionSlug) ? sectionSlug : null;
 };
 
-// Helper function to convert URL item to proper item name
 const getItemFromUrl = (itemSlug) => {
   return itemSlug
     .split('-')
@@ -42,18 +39,15 @@ const getItemFromUrl = (itemSlug) => {
     .join(' ');
 };
 
-// A caching mechanism for content to avoid re-fetching on back/forward navigation
-const contentCache = new Map();
-
 export default function ItemPage() {
   const router = useRouter();
   const { section, item } = router.query;
+  const { getPost, isInitialLoading } = usePostsContext();
   
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [activeSection, setActiveSectionState] = useState(null);
   const [activeItem, setActiveItemState] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [contentData, setContentData] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -63,7 +57,7 @@ export default function ItemPage() {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
       if (window.innerWidth >= 768) {
-        setIsSidebarOpen(true); // Auto-open on desktop
+        setIsSidebarOpen(true);
       }
     };
     
@@ -72,97 +66,43 @@ export default function ItemPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Corrected fetchContent function
-  const fetchContent = async (sectionName, itemName) => {
-    const cacheKey = `${sectionName}-${itemName}`;
-    if (contentCache.has(cacheKey)) {
-      return contentCache.get(cacheKey);
-    }
-
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Construct the API URL
-    const apiUrl = `/api/posts?language=${encodeURIComponent(sectionName)}&heading=${encodeURIComponent(itemName)}`;
-
-    const response = await fetch(apiUrl);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch content from the API');
-    }
-
-    const data = await response.json();
-    const post = data.posts && data.posts.length > 0 ? data.posts[0] : null;
-
-    if (post) {
-      contentCache.set(cacheKey, post);
-      return post;
-    }
-    
-    return null;
-  };  
-
-  // The single, powerful useEffect that handles all logic
+  // Process route and get content (now instant!)
   useEffect(() => {
-    let isMounted = true;
-    
-    const processRoute = async () => {
-      setIsLoading(true);
-      setError(null);
-      setContentData(null);
+    if (!router.isReady || isInitialLoading) {
+      return;
+    }
 
-      if (!router.isReady) {
-        return;
-      }
-
-      // Handle invalid or incomplete URLs
-      if (!section || !item) {
-        if (section && sidebarData[section]) {
-          const firstItemSlug = sidebarData[section][0].replace(/\s+/g, '-');
-          router.replace(`/${section}/${firstItemSlug}`);
-        } else {
-          router.replace('/HTML/Prerequisites');
-        }
-        return;
-      }
-      
-      const properSectionName = getSectionFromUrl(section);
-      const itemFromUrl = getItemFromUrl(item);
-
-      if (properSectionName && sidebarData[properSectionName]?.includes(itemFromUrl)) {
-        if (isMounted) {
-          setActiveSectionState(properSectionName);
-          setActiveItemState(itemFromUrl);
-          
-          try {
-            const data = await fetchContent(properSectionName, itemFromUrl);
-            if (isMounted) {
-              setContentData(data);
-            }
-          } catch (err) {
-            if (isMounted) {
-              setError({ type: 'FETCH_ERROR', message: 'Failed to load content.' });
-            }
-          } finally {
-            if (isMounted) {
-              setIsLoading(false);
-            }
-          }
-        }
+    // Handle invalid or incomplete URLs
+    if (!section || !item) {
+      if (section && sidebarData[section]) {
+        const firstItemSlug = sidebarData[section][0].replace(/\s+/g, '-');
+        router.replace(`/${section}/${firstItemSlug}`);
       } else {
-        if (isMounted) {
-          setError({ type: 'INVALID_ROUTE', message: `Invalid tutorial path: ${section}/${item}` });
-          setIsLoading(false);
-        }
+        router.replace('/HTML/Prerequisites');
       }
-    };
+      return;
+    }
     
-    processRoute();
+    const properSectionName = getSectionFromUrl(section);
+    const itemFromUrl = getItemFromUrl(item);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [router.isReady, section, item, router]);
+    if (properSectionName && sidebarData[properSectionName]?.includes(itemFromUrl)) {
+      setActiveSectionState(properSectionName);
+      setActiveItemState(itemFromUrl);
+      
+      // Get post instantly from pre-loaded data
+      const post = getPost(properSectionName, itemFromUrl);
+      setContentData(post);
+      
+      if (!post) {
+        setError({ type: 'CONTENT_NOT_FOUND', message: `Content not available for ${properSectionName}/${itemFromUrl}` });
+      } else {
+        setError(null);
+      }
+    } else {
+      setError({ type: 'INVALID_ROUTE', message: `Invalid tutorial path: ${section}/${item}` });
+    }
+  }, [router.isReady, section, item, router, isInitialLoading, getPost]);
 
   // Handler functions
   const handleSetActiveSection = (newSection) => {
@@ -182,41 +122,14 @@ export default function ItemPage() {
     }
   };
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(prev => !prev);
-  };
+  const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
+  const toggleRightSidebar = () => setIsRightSidebarOpen(prev => !prev);
+  const closeSidebar = () => setIsSidebarOpen(false);
+  const closeRightSidebar = () => setIsRightSidebarOpen(false);
 
-  const toggleRightSidebar = () => {
-    setIsRightSidebarOpen(prev => !prev);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false);
-  };
-
-  const closeRightSidebar = () => {
-    setIsRightSidebarOpen(false);
-  };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-2xl border border-white/20">
-          <div className="relative mb-6">
-            <Loader2 className="w-16 h-16 text-blue-600 mx-auto animate-spin" />
-            <div className="absolute inset-0 w-16 h-16 border-4 border-blue-200 rounded-full mx-auto animate-pulse"></div>
-          </div>
-          <h2 className="text-2xl font-bold text-slate-700 mb-2">Loading Content</h2>
-          <p className="text-slate-500">Preparing your learning experience...</p>
-          <div className="mt-4 flex justify-center space-x-1">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-          </div>
-        </div>
-      </div>
-    );
+  // Show app loading screen while initial data is loading
+  if (isInitialLoading) {
+    return null; // AppLoadingScreen will handle this
   }
 
   // Error state
@@ -228,7 +141,7 @@ export default function ItemPage() {
             <AlertTriangle className="w-20 h-20 text-red-500 mx-auto" />
             <div className="absolute inset-0 w-20 h-20 bg-red-100 rounded-full mx-auto animate-ping opacity-20"></div>
           </div>
-          <h2 className="text-3xl font-bold text-red-600 mb-4">Oops! Content Not Found</h2>
+          <h2 className="text-3xl font-bold text-red-600 mb-4">Content Not Found</h2>
           <p className="text-slate-600 mb-8 text-lg leading-relaxed">{error.message}</p>
           
           <div className="grid gap-4 sm:grid-cols-2">
@@ -277,7 +190,6 @@ export default function ItemPage() {
             className={`bg-white/90 backdrop-blur-sm text-gray-700 p-3 rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:bg-white hover:shadow-xl ${
               isSidebarOpen ? 'bg-blue-600 text-white' : ''
             }`}
-            aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -287,7 +199,6 @@ export default function ItemPage() {
             className={`bg-white/90 backdrop-blur-sm text-gray-700 p-3 rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:bg-white hover:shadow-xl ${
               isRightSidebarOpen ? 'bg-purple-600 text-white' : ''
             }`}
-            aria-label={isRightSidebarOpen ? 'Close table of contents' : 'Open table of contents'}
           >
             <Zap className="w-5 h-5" />
           </button>
@@ -299,7 +210,6 @@ export default function ItemPage() {
           className={`hidden md:block fixed top-32 z-40 bg-white/90 backdrop-blur-sm text-gray-700 p-3 rounded-r-xl shadow-lg border border-white/20 transition-all duration-300 hover:bg-white hover:shadow-xl ${
             isSidebarOpen ? 'left-64' : 'left-0'
           }`}
-          aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
         >
           {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
         </button>
@@ -328,7 +238,7 @@ export default function ItemPage() {
                     setActiveItem={handleSetActiveItem}
                     setActiveSection={handleSetActiveSection}
                     contentData={contentData}
-                    isLoading={isLoading}
+                    isLoading={false} // No longer loading since data is pre-loaded
                   />
                 </main>
               </div>
