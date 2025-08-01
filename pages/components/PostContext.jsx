@@ -1,5 +1,3 @@
-
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const PostsContext = createContext();
@@ -73,3 +71,25 @@ export const PostsProvider = ({ children }) => {
     </PostsContext.Provider>
   );
 };
+
+// Default export to satisfy Next.js page requirements
+// This creates a dummy page that users shouldn't access directly
+const PostContextPage = () => {
+  return (
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      minHeight: '100vh',
+      padding: '20px',
+      textAlign: 'center'
+    }}>
+      <h1>Post Context Provider</h1>
+      <p>This page should not be accessed directly.</p>
+      <p>It contains the context provider for managing posts throughout the application.</p>
+    </div>
+  );
+};
+
+export default PostContextPage;
