@@ -1,4 +1,4 @@
-// ItemPage.js
+// ItemPage.js - Enhanced with modern styling and responsive design
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
@@ -8,7 +8,17 @@ import Navbar2 from '../components/Navbar2';
 import Sidenavbar from '../components/Sidenavbar';
 import Contentpage from '../components/Contentpage';
 import Footer from '../components/Footer';
-import { ChevronRight, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { 
+  ChevronRight, 
+  ChevronLeft, 
+  Loader2, 
+  AlertTriangle, 
+  Menu,
+  X,
+  Home,
+  BookOpen,
+  Zap
+} from 'lucide-react';
 import RightSidenavbar from '../components/RightSidenavbar';
 
 // Static sidebar data mapping sections to their respective items
@@ -21,10 +31,7 @@ const sidebarData = {
 
 // Helper function to convert URL section to proper section name
 const getSectionFromUrl = (sectionSlug) => {
-  if (Object.keys(sidebarData).includes(sectionSlug)) {
-    return sectionSlug;
-  }
-  return null;
+  return Object.keys(sidebarData).includes(sectionSlug) ? sectionSlug : null;
 };
 
 // Helper function to convert URL item to proper item name
@@ -35,88 +42,129 @@ const getItemFromUrl = (itemSlug) => {
     .join(' ');
 };
 
+// A caching mechanism for content to avoid re-fetching on back/forward navigation
+const contentCache = new Map();
+
 export default function ItemPage() {
   const router = useRouter();
   const { section, item } = router.query;
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [activeSection, setActiveSectionState] = useState(null);
   const [activeItem, setActiveItemState] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [contentData, setContentData] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
 
-  console.log('=== ITEM PAGE DEBUG ===');
-  console.log('Router query:', router.query);
-  console.log('Router isReady:', router.isReady);
-  console.log('Section param:', section);
-  console.log('Item param:', item);
-  console.log('Current activeSection state:', activeSection);
-  console.log('Current activeItem state:', activeItem);
-
-  // Effect to update activeSection and activeItem when router query changes
+  // Detect mobile screen size
   useEffect(() => {
-    const initializePage = async () => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setIsSidebarOpen(true); // Auto-open on desktop
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Corrected fetchContent function
+  const fetchContent = async (sectionName, itemName) => {
+    const cacheKey = `${sectionName}-${itemName}`;
+    if (contentCache.has(cacheKey)) {
+      return contentCache.get(cacheKey);
+    }
+
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Construct the API URL
+    const apiUrl = `/api/posts?language=${encodeURIComponent(sectionName)}&heading=${encodeURIComponent(itemName)}`;
+
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch content from the API');
+    }
+
+    const data = await response.json();
+    const post = data.posts && data.posts.length > 0 ? data.posts[0] : null;
+
+    if (post) {
+      contentCache.set(cacheKey, post);
+      return post;
+    }
+    
+    return null;
+  };  
+
+  // The single, powerful useEffect that handles all logic
+  useEffect(() => {
+    let isMounted = true;
+    
+    const processRoute = async () => {
       setIsLoading(true);
       setError(null);
+      setContentData(null);
 
-      if (router.isReady && section && item) {
-        console.log('Processing router params from URL:', { section, item });
-
-        const properSectionName = getSectionFromUrl(section);
-        const itemFromUrl = getItemFromUrl(item);
-
-        console.log('Converted to display format:', { properSectionName, itemFromUrl });
-
-        if (properSectionName && sidebarData[properSectionName] && sidebarData[properSectionName].includes(itemFromUrl)) {
-          console.log('Valid section and item found in data. Updating states.');
-          setActiveSectionState(properSectionName);
-          setActiveItemState(itemFromUrl);
-          setError(null);
-        } else {
-          console.error('Invalid URL section or item:', {
-            properSectionName,
-            itemFromUrl,
-            availableSections: Object.keys(sidebarData),
-            availableItems: properSectionName ? (sidebarData[properSectionName] || []) : []
-          });
-          setError({
-            type: 'INVALID_ROUTE',
-            message: `Invalid tutorial path: ${section}/${item}`,
-            section: properSectionName,
-            item: itemFromUrl
-          });
-        }
-      } else if (router.isReady && section && !item) {
-        // Handle direct access to /HTML or /CSS without an item
-        const properSectionName = getSectionFromUrl(section);
-        if (properSectionName && sidebarData[properSectionName]) {
-          const firstItemSlug = sidebarData[properSectionName][0].replace(/\s+/g, '-');
-          console.log(`Redirecting to first item of ${properSectionName}: /${section}/${firstItemSlug}`);
-          router.replace(`/${section}/${firstItemSlug}`);
-          return; // Don't set loading to false, let the redirect handle it
-        } else {
-          setError({
-            type: 'INVALID_SECTION',
-            message: `Invalid section: ${section}`,
-            section: section
-          });
-        }
-      } else if (router.isReady && !section && !item) {
-        // If accessing root, redirect to default HTML Prerequisites
-        console.log('No section/item in URL, redirecting to default HTML Prerequisites');
-        router.replace('/HTML/Prerequisites');
-        return; // Don't set loading to false, let the redirect handle it
+      if (!router.isReady) {
+        return;
       }
 
-      // Add a small delay to prevent flash of loading state
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 300);
-    };
+      // Handle invalid or incomplete URLs
+      if (!section || !item) {
+        if (section && sidebarData[section]) {
+          const firstItemSlug = sidebarData[section][0].replace(/\s+/g, '-');
+          router.replace(`/${section}/${firstItemSlug}`);
+        } else {
+          router.replace('/HTML/Prerequisites');
+        }
+        return;
+      }
+      
+      const properSectionName = getSectionFromUrl(section);
+      const itemFromUrl = getItemFromUrl(item);
 
-    initializePage();
+      if (properSectionName && sidebarData[properSectionName]?.includes(itemFromUrl)) {
+        if (isMounted) {
+          setActiveSectionState(properSectionName);
+          setActiveItemState(itemFromUrl);
+          
+          try {
+            const data = await fetchContent(properSectionName, itemFromUrl);
+            if (isMounted) {
+              setContentData(data);
+            }
+          } catch (err) {
+            if (isMounted) {
+              setError({ type: 'FETCH_ERROR', message: 'Failed to load content.' });
+            }
+          } finally {
+            if (isMounted) {
+              setIsLoading(false);
+            }
+          }
+        }
+      } else {
+        if (isMounted) {
+          setError({ type: 'INVALID_ROUTE', message: `Invalid tutorial path: ${section}/${item}` });
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    processRoute();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router.isReady, section, item, router]);
 
-  // Handler functions for state management
+  // Handler functions
   const handleSetActiveSection = (newSection) => {
     if (newSection && sidebarData[newSection]) {
       const sectionSlug = newSection;
@@ -138,194 +186,178 @@ export default function ItemPage() {
     setIsSidebarOpen(prev => !prev);
   };
 
-  // Show loading while router is not ready or while page is initializing
-  if (!router.isReady || isLoading) {
+  const toggleRightSidebar = () => {
+    setIsRightSidebarOpen(prev => !prev);
+  };
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
+  const closeRightSidebar = () => {
+    setIsRightSidebarOpen(false);
+  };
+
+  // Loading state
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
-            <Loader2 className="w-10 h-10 text-white animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-2xl border border-white/20">
+          <div className="relative mb-6">
+            <Loader2 className="w-16 h-16 text-blue-600 mx-auto animate-spin" />
+            <div className="absolute inset-0 w-16 h-16 border-4 border-blue-200 rounded-full mx-auto animate-pulse"></div>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Loading Tutorial</h2>
-          <p className="text-slate-600 mb-2">Preparing your learning experience...</p>
-          <div className="w-full bg-slate-200 rounded-full h-2 mt-4">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+          <h2 className="text-2xl font-bold text-slate-700 mb-2">Loading Content</h2>
+          <p className="text-slate-500">Preparing your learning experience...</p>
+          <div className="mt-4 flex justify-center space-x-1">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
           </div>
         </div>
       </div>
     );
   }
 
-  // Show error if there's an error state
+  // Error state
   if (error) {
-    const availableSections = Object.keys(sidebarData);
-    const currentSectionItems = error.section && sidebarData[error.section] ? sidebarData[error.section] : [];
-
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50">
-        <Navbar />
-        <div className="flex items-center justify-center min-h-[calc(100vh-100px)] px-4">
-          <div className="text-center bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl max-w-2xl border border-white/20">
-            <div className="w-20 h-20 bg-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
-              <AlertTriangle className="w-10 h-10 text-white" />
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50 flex items-center justify-center p-4">
+        <div className="text-center bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-2xl max-w-2xl border border-white/20">
+          <div className="relative mb-6">
+            <AlertTriangle className="w-20 h-20 text-red-500 mx-auto" />
+            <div className="absolute inset-0 w-20 h-20 bg-red-100 rounded-full mx-auto animate-ping opacity-20"></div>
+          </div>
+          <h2 className="text-3xl font-bold text-red-600 mb-4">Oops! Content Not Found</h2>
+          <p className="text-slate-600 mb-8 text-lg leading-relaxed">{error.message}</p>
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            <button
+              onClick={() => router.push('/')}
+              className="group flex items-center justify-center space-x-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              <Home className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              <span>Return Home</span>
+            </button>
             
-            <h2 className="text-3xl font-bold text-red-600 mb-4">Content Not Found</h2>
-            <p className="text-slate-600 mb-6 text-lg">
-              {error.message}
-            </p>
-
-            <div className="bg-slate-50 rounded-xl p-6 mb-8 text-left">
-              <h3 className="font-semibold text-slate-900 mb-3">Available Learning Paths:</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {availableSections.map((availableSection) => (
-                  <div key={availableSection} className="space-y-2">
-                    <h4 className="font-medium text-slate-800">{availableSection}</h4>
-                    <div className="text-sm text-slate-600 space-y-1">
-                      {sidebarData[availableSection].slice(0, 3).map((topic) => (
-                        <div key={topic}>• {topic}</div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <button
-                onClick={() => router.push('/')}
-                className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-              >
-                Return Home
-              </button>
-              <button
-                onClick={() => router.push('/HTML/Prerequisites')}
-                className="w-full px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-              >
-                Start with HTML Prerequisites
-              </button>
-            </div>
+            <button
+              onClick={() => router.push('/HTML/Prerequisites')}
+              className="group flex items-center justify-center space-x-2 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              <BookOpen className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              <span>Start Learning</span>
+            </button>
           </div>
         </div>
       </div>
     );
   }
-
-  // Final validation before rendering main content
-  if (!activeSection || !activeItem) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
-            <AlertTriangle className="w-8 h-8 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Something went wrong</h2>
-          <p className="text-slate-600 mb-4">Unable to load the tutorial content</p>
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-          >
-            Go Home
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  console.log('Rendering with derived states:', { activeSection, activeItem, isSidebarOpen });
 
   return (
     <>
       <Head>
         <title>{activeItem} - {activeSection} Tutorial | CodeLearn</title>
-        <meta name="description" content={`Learn ${activeItem} in ${activeSection} with detailed examples and explanations. Master web development with CodeLearn's comprehensive tutorials.`} />
-        <meta name="keywords" content={`${activeSection}, ${activeItem}, web development, tutorial, coding, programming`} />
+        <meta name="description" content={`Learn ${activeItem} in ${activeSection} with detailed examples and explanations.`} />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        
-        {/* Open Graph */}
-        <meta property="og:title" content={`${activeItem} - ${activeSection} Tutorial`} />
-        <meta property="og:description" content={`Learn ${activeItem} in ${activeSection} with detailed examples`} />
-        <meta property="og:type" content="article" />
-        
-        {/* Structured Data */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "LearningResource",
-              "name": `${activeItem} - ${activeSection} Tutorial`,
-              "description": `Learn ${activeItem} in ${activeSection} with detailed examples and explanations`,
-              "educationalLevel": "Beginner to Intermediate",
-              "learningResourceType": "Tutorial"
-            })
-          }}
-        />
       </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
+      
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex flex-col">
+        {/* Navigation */}
         <Navbar />
         <Navbar2
           activeSection={activeSection}
+          setActiveSection={handleSetActiveSection}
           setIsSidebarOpen={setIsSidebarOpen}
         />
 
-        {/* Left Sidebar Toggle Button for Mobile */}
+        {/* Mobile Navigation Buttons */}
+        <div className="fixed top-20 left-4 right-4 z-50 flex justify-between items-center md:hidden">
+          <button
+            onClick={toggleSidebar}
+            className={`bg-white/90 backdrop-blur-sm text-gray-700 p-3 rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:bg-white hover:shadow-xl ${
+              isSidebarOpen ? 'bg-blue-600 text-white' : ''
+            }`}
+            aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+          >
+            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
+          <button
+            onClick={toggleRightSidebar}
+            className={`bg-white/90 backdrop-blur-sm text-gray-700 p-3 rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:bg-white hover:shadow-xl ${
+              isRightSidebarOpen ? 'bg-purple-600 text-white' : ''
+            }`}
+            aria-label={isRightSidebarOpen ? 'Close table of contents' : 'Open table of contents'}
+          >
+            <Zap className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Desktop Sidebar Toggle */}
         <button
           onClick={toggleSidebar}
-          className={`fixed top-32 z-50 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white p-3 rounded-r-xl shadow-2xl transition-all duration-300 flex items-center justify-center group
-            ${isSidebarOpen ? 'left-60' : 'left-0'}
-            block md:hidden`}
+          className={`hidden md:block fixed top-32 z-40 bg-white/90 backdrop-blur-sm text-gray-700 p-3 rounded-r-xl shadow-lg border border-white/20 transition-all duration-300 hover:bg-white hover:shadow-xl ${
+            isSidebarOpen ? 'left-64' : 'left-0'
+          }`}
           aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
         >
-          {isSidebarOpen ? (
-            <ChevronLeft className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-          ) : (
-            <ChevronRight className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-          )}
+          {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
         </button>
 
-        {/* Main content area with responsive layout */}
-        <div className="flex flex-1">
+        {/* Main Content Area */}
+        <div className="flex flex-1 relative">
           {/* Left Sidebar */}
           <Sidenavbar
             activeSection={activeSection}
             activeItem={activeItem}
             setActiveItem={handleSetActiveItem}
             isSidebarOpen={isSidebarOpen}
+            onClose={closeSidebar}
           />
 
-          {/* Content area wrapper */}
-          <div className="flex flex-col flex-1 min-h-[calc(100vh-160px)]">
-            {/* Main Content Area with Desktop Right Sidebar */}
-            <div className="flex flex-1">
+          {/* Content Area */}
+          <div className="flex flex-col flex-1 min-w-0">
+            <div className="flex flex-1 relative">
               {/* Main Content */}
-              <div className="flex-1 overflow-auto transition-all duration-300">
-                <Contentpage
-                  activeSection={activeSection}
-                  activeItem={activeItem}
-                  setActiveItem={handleSetActiveItem}
-                  setActiveSection={handleSetActiveSection}
-                />
+              <div className="flex-1 overflow-auto">
+                <main className="p-4 md:p-6 lg:p-8">
+                  <Contentpage
+                    key={`${activeSection}-${activeItem}`}
+                    activeSection={activeSection}
+                    activeItem={activeItem}
+                    setActiveItem={handleSetActiveItem}
+                    setActiveSection={handleSetActiveSection}
+                    contentData={contentData}
+                    isLoading={isLoading}
+                  />
+                </main>
               </div>
 
-              {/* Right Sidebar - Desktop only (hidden on mobile/tablet) */}
-              <RightSidenavbar
-                activeSection={activeSection} 
-                activeItem={activeItem} 
-              />
+              {/* Right Sidebar */}
+              <div className={`${isRightSidebarOpen || !isMobile ? 'block' : 'hidden'} ${isMobile ? 'absolute right-0 top-0 h-full z-30' : 'relative'}`}>
+                <RightSidenavbar 
+                  activeSection={activeSection} 
+                  activeItem={activeItem}
+                  isOpen={isRightSidebarOpen}
+                  onClose={closeRightSidebar}
+                  isMobile={isMobile}
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar Content - Mobile/Tablet only (shown below main content) */}
-        <RightSidenavbar
-          activeSection={activeSection} 
-          activeItem={activeItem} 
-        />
-
+        {/* Footer */}
         <Footer />
-      </div>    
+
+        {/* Mobile backdrop for right sidebar */}
+        {isMobile && isRightSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-20"
+            onClick={closeRightSidebar}
+          />
+        )}
+      </div>
     </>
   );
 }
