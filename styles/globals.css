@@ -1,1 +1,158 @@
 @import "tailwindcss";
+
+
+/* Add these styles to your globals.css file */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme transition styles */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Ensure dark mode background covers the entire page */
+html.dark {
+  background-color: #111827; /* gray-900 */
+  color: #f9fafb; /* gray-50 */
+}
+
+html.light {
+  background-color: #ffffff;
+  color: #111827; /* gray-900 */
+}
+
+/* Smooth transitions for all theme-related elements */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Override for elements that shouldn't transition */
+.no-transition * {
+  transition: none !important;
+}
+
+/* Custom scrollbar for dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Focus styles that work in both themes */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900;
+}
+
+/* Selection colors */
+::selection {
+  @apply bg-blue-500/20 dark:bg-blue-400/20;
+}
+
+/* Ensure images don't flash during theme transition */
+img {
+  transition: opacity 0.3s ease;
+}
+
+/* Loading skeleton improvements */
+.skeleton {
+  @apply animate-pulse bg-gray-200 dark:bg-gray-700;
+  background: linear-gradient(90deg, 
+    theme('colors.gray.200') 25%, 
+    theme('colors.gray.300') 50%, 
+    theme('colors.gray.200') 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg, 
+    theme('colors.gray.700') 25%, 
+    theme('colors.gray.600') 50%, 
+    theme('colors.gray.700') 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Backdrop blur enhancements */
+.backdrop-blur-md {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Glass morphism effect */
+.glass {
+  @apply bg-white/10 dark:bg-gray-900/10 backdrop-blur-md border border-white/20 dark:border-gray-700/20;
+}
+
+/* Button hover animations */
+.btn-hover {
+  @apply transform transition-all duration-200 hover:scale-105 active:scale-95;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent;
+}
+
+/* Custom animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* Dark mode utilities */
+.dark-mode-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Prevent flash of unstyled content */
+.theme-loading {
+  visibility: hidden;
+}
+
+.theme-loaded {
+  visibility: visible;
+}
