@@ -8,7 +8,6 @@ import Navbar2 from '../components/Navbar2';
 import Sidenavbar from '../components/Sidenavbar';
 import Contentpage from '../components/Contentpage';
 import Footer from '../components/Footer';
-import RightSidenavbar from '../components/RightSidenavbar';
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -17,15 +16,9 @@ import {
   X,
   Home,
   BookOpen,
-  Zap,
   Settings,
   Loader2,
-  Wifi,
-  WifiOff,
-  Sun,
-  Moon,
-  Globe,
-  Clock
+  WifiOff
 } from 'lucide-react';
 
 // Static sidebar data mapping sections to their respective items
@@ -165,8 +158,6 @@ const useRouting = (section, item, router, getPost) => {
 
 // Memoized components
 const LoadingScreen = React.memo(() => {
-  const { theme } = useTheme();
-  
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 transition-colors duration-300">
       <div className="text-center space-y-6 p-8">
@@ -258,71 +249,26 @@ const ErrorScreen = React.memo(({ error, router }) => {
   );
 });
 
-const OfflineNotification = React.memo(({ isOnline }) => (
-  <div className={`transition-all duration-500 ${isOnline ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}>
-    <div className="bg-orange-100 dark:bg-orange-900/30 border-l-4 border-orange-500 dark:border-orange-400 
-                    text-center py-2  px-4 text-sm font-medium flex items-center justify-center space-x-2 
-                    text-orange-800 dark:text-orange-200 relative z-[60]">
-      <WifiOff className="w-4 h-4" />
-      <span>You're offline. Some features may not work properly.</span>
-    </div>
-  </div>
-));
-
-const StatusIndicator = React.memo(({ isOnline }) => (
-  <div className="fixed bottom-4 left-4 z-50">
-    <div className={`px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 text-sm transition-all duration-300
-                    ${isOnline 
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700'
-                      : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700'
-                    }`}>
-      {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
-      <span>{isOnline ? 'Connected' : 'Offline Mode'}</span>
-    </div>
-  </div>
-));
-
-const MobileControlPanel = React.memo(({ 
-  isSidebarOpen, 
-  isRightSidebarOpen, 
-  toggleSidebar, 
-  toggleRightSidebar, 
-  isOnline 
-}) => (
-  <div className="fixed top-20 left-4 right-4 z-50 flex justify-between items-center md:hidden">
-    <div className="flex space-x-2">
-      <button
-        onClick={toggleSidebar}
-        className={`backdrop-blur-sm p-3 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl
-                   border border-gray-200 dark:border-gray-600
-                   bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300
-                   ${isSidebarOpen ? 'shadow-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}`}
-        aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-      >
-        {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </button>
-    </div>
-
-    <div className="flex space-x-2">
-      {!isOnline && (
-        <div className="backdrop-blur-sm p-3 rounded-xl shadow-lg
-                       border border-orange-200 dark:border-orange-700
-                       bg-orange-50/90 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
-          <WifiOff className="w-5 h-5" />
-        </div>
-      )}
-      
-      <button
-        onClick={toggleRightSidebar}
-        className={`backdrop-blur-sm p-3 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl
-                   border border-gray-200 dark:border-gray-600
-                   bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300
-                   ${isRightSidebarOpen ? 'shadow-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : ''}`}
-        aria-label={isRightSidebarOpen ? 'Close tools panel' : 'Open tools panel'}
-      >
-        <Zap className="w-5 h-5" />
-      </button>
-    </div>
+const MobileSidebarToggle = React.memo(({ isSidebarOpen, toggleSidebar, isOnline }) => (
+  <div className="md:hidden fixed top-20 left-4 z-50 flex items-center space-x-2">
+    <button
+      onClick={toggleSidebar}
+      className={`backdrop-blur-sm p-3 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl
+                 border border-gray-200 dark:border-gray-600
+                 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300
+                 ${isSidebarOpen ? 'shadow-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}`}
+      aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+    >
+      {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+    </button>
+    
+    {!isOnline && (
+      <div className="backdrop-blur-sm p-3 rounded-xl shadow-lg
+                     border border-orange-200 dark:border-orange-700
+                     bg-orange-50/90 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
+        <WifiOff className="w-5 h-5" />
+      </div>
+    )}
   </div>
 ));
 
@@ -354,12 +300,12 @@ export default function ItemPage() {
   
   // Local state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Effects
   useEffect(() => {
     setMounted(true);
+    // Always show sidebar on desktop by default
     if (isDesktop) {
       setIsSidebarOpen(true);
     }
@@ -384,9 +330,7 @@ export default function ItemPage() {
   }, [activeSection, router]);
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
-  const toggleRightSidebar = useCallback(() => setIsRightSidebarOpen(prev => !prev), []);
   const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
-  const closeRightSidebar = useCallback(() => setIsRightSidebarOpen(false), []);
 
   const seoData = useMemo(() => ({
     title: activeItem ? `${activeItem} - ${activeSection} Tutorial | CodeLearn` : 'CodeLearn - Web Development Tutorials',
@@ -423,22 +367,17 @@ export default function ItemPage() {
         <title>{seoData.title}</title>
         <meta name="description" content={seoData.description} />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        
-        {/* Theme color based on current theme */}
         <meta name="theme-color" content={theme === 'dark' ? '#1f2937' : '#ffffff'} />
         
-        {/* Open Graph */}
         <meta property="og:title" content={seoData.title} />
         <meta property="og:description" content={seoData.description} />
         <meta property="og:type" content="article" />
         <meta property="og:site_name" content="CodeLearn" />
         
-        {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={seoData.title} />
         <meta name="twitter:description" content={seoData.description} />
         
-        {/* Structured Data */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(seoData.structuredData) }}
@@ -447,22 +386,30 @@ export default function ItemPage() {
       
       <div className="min-h-screen flex flex-col transition-colors duration-300 bg-gray-50 dark:bg-gray-900">
         
+        {/* Offline notification */}
+        {!isOnline && (
+          <div className="bg-orange-100 dark:bg-orange-900/30 border-l-4 border-orange-500 dark:border-orange-400 
+                          text-center py-2 px-4 text-sm font-medium flex items-center justify-center space-x-2 
+                          text-orange-800 dark:text-orange-200">
+            <WifiOff className="w-4 h-4" />
+            <span>You're offline. Some features may not work properly.</span>
+          </div>
+        )}
 
         {/* Navigation */}
-        <div className='border sticky top-0 z-50'>
-        <Navbar/>
-        <Navbar2
-          activeSection={activeSection}
-          setActiveSection={handleSetActiveSection}
-          setIsSidebarOpen={setIsSidebarOpen}
-        /></div>
+        <div className=" sticky top-0 z-50">
+          <Navbar />
+          <Navbar2
+            activeSection={activeSection}
+            setActiveSection={handleSetActiveSection}
+            setIsSidebarOpen={setIsSidebarOpen}
+          />
+        </div>
 
-        {/* Mobile Control Panel */}
-        <MobileControlPanel
+        {/* Mobile Sidebar Toggle */}
+        <MobileSidebarToggle
           isSidebarOpen={isSidebarOpen}
-          isRightSidebarOpen={isRightSidebarOpen}
           toggleSidebar={toggleSidebar}
-          toggleRightSidebar={toggleRightSidebar}
           isOnline={isOnline}
         />
 
@@ -472,64 +419,46 @@ export default function ItemPage() {
           toggleSidebar={toggleSidebar}
         />
 
-        {/* Main Content Area */}
+        {/* Main Layout - Sidebar and Content Side by Side */}
         <div className="flex flex-1 relative">
-          {/* Left Sidebar */}
-          <Sidenavbar
-            activeSection={activeSection}
-            activeItem={activeItem}
-            setActiveItem={handleSetActiveItem}
-            isSidebarOpen={isSidebarOpen}
-            onClose={closeSidebar}
-          />
+          {/* Left Sidebar - Only render when open on desktop, always render on mobile for overlay */}
+          {(isSidebarOpen || isMobile) && (
+            <Sidenavbar
+              activeSection={activeSection}
+              activeItem={activeItem}
+              setActiveItem={handleSetActiveItem}
+              isSidebarOpen={isSidebarOpen}
+              onClose={closeSidebar}
+            />
+          )}
 
-          {/* Content Area */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <div className="flex flex-1 relative">
-              {/* Main Content */}
-              <div className="flex-1 overflow-auto">
-                <main className="p-4 md:p-6 lg:p-8 ">
-                  <Contentpage
-                    key={`${activeSection}-${activeItem}`}
-                    activeSection={activeSection}
-                    activeItem={activeItem}
-                    setActiveItem={handleSetActiveItem}
-                    setActiveSection={handleSetActiveSection}
-                    contentData={contentData}
-                    isLoading={false}
-                  />
-                </main>
-              </div>
-
-              {/* Right Sidebar */}
-              <div className={`${isRightSidebarOpen || !isMobile ? 'block' : 'hidden'} 
-                              ${isMobile ? 'absolute right-0 top-0 h-full z-30' : 'relative'}`}>
-                <RightSidenavbar 
-                  activeSection={activeSection} 
-                  activeItem={activeItem}
-                  isOpen={isRightSidebarOpen}
-                  onClose={closeRightSidebar}
-                  isMobile={isMobile}
-                />
-              </div>
-            </div>
+          {/* Main Content Area - Full width when sidebar closed */}
+          <div className="flex-1 min-w-0 overflow-auto">
+            <main className="p-4">
+              <Contentpage
+                key={`${activeSection}-${activeItem}`}
+                activeSection={activeSection}
+                activeItem={activeItem}
+                setActiveItem={handleSetActiveItem}
+                setActiveSection={handleSetActiveSection}
+                contentData={contentData}
+                isLoading={false}
+              />
+            </main>
           </div>
         </div>
 
-        {/* Footer */}
-        <Footer />
-
-        {/* Mobile backdrop for right sidebar */}
-        {isMobile && isRightSidebarOpen && (
+        {/* Mobile backdrop for sidebar */}
+        {isMobile && isSidebarOpen && (
           <div 
             className="fixed inset-0 bg-black/50 dark:bg-black/70 z-20 backdrop-blur-sm"
-            onClick={closeRightSidebar}
+            onClick={closeSidebar}
             aria-hidden="true"
           />
         )}
 
-        {/* Status Indicator */}
-        <StatusIndicator isOnline={isOnline} />
+        {/* Footer */}
+        <Footer />
       </div>
     </>
   );
