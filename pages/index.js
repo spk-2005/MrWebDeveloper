@@ -460,7 +460,7 @@ function HomeContent() {
                                rounded-full -translate-y-16 translate-x-16 opacity-50"></div>
                 
                 <div className="relative">
-                  <div className="text-6xl text-blue-600 dark:text-blue-400 mb-6">"</div>
+                  <div className="text-6xl text-blue-600 dark:text-blue-400 mb-6">&quot;</div>
                   <div className="transition-all duration-500">
                     <blockquote className="text-xl lg:text-2xl text-slate-700 dark:text-gray-200 mb-8 leading-relaxed font-medium">
                       {testimonials[currentTestimonial].content}

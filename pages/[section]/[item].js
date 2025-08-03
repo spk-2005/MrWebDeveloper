@@ -392,7 +392,7 @@ export default function ItemPage() {
                           text-center py-2 px-4 text-sm font-medium flex items-center justify-center space-x-2 
                           text-orange-800 dark:text-orange-200">
             <WifiOff className="w-4 h-4" />
-            <span>You're offline. Some features may not work properly.</span>
+            <span>You&apos;re offline. Some features may not work properly.</span>
           </div>
         )}
 
