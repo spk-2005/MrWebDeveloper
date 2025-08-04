@@ -393,7 +393,7 @@ export default function Contentpage({
       <div className="">
         {/* Breadcrumb & Actions */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between ">
-          <nav className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+          <nav className="flex items-center text-sm text-gray-900">
             <button 
               onClick={() => handleSetActiveSection(null)} 
               className="hover:underline transition-colors hover:text-gray-900 dark:hover:text-gray-200"
@@ -409,6 +409,10 @@ export default function Contentpage({
             </button>
             <ChevronRight className="w-4 h-4 mx-2" />
             <span className="font-medium text-gray-900 dark:text-white">{activeItem}</span>
+          
+          <div className="flex flex-wrap gap-4 ">
+            <span>Updated: {formatDate(post.lastUpdated)}</span>
+          </div>
           </nav>
           
           <div className="flex items-center space-x-2">
@@ -429,16 +433,6 @@ export default function Contentpage({
               <span>{likeCount}</span>
             </button>
             
-            <button 
-              onClick={handleBookmark}
-              className={`p-2 rounded-lg transition-all border
-                ${bookmarked 
-                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300' 
-                  : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-            >
-              <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />
-            </button>
             
             <button 
               onClick={handleShare}
@@ -451,33 +445,22 @@ export default function Contentpage({
 
         {/* Title & Meta Info */}
         <div className="mb-2">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-gray-900 dark:text-white">
+          <h1 className="  lg:text-5xl font-bold mb-4 ">
             {activeItem}
+            
           </h1>
-          <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
-            <span>Updated: {formatDate(post.lastUpdated)}</span>
-          </div>
         </div>
 
         {/* Main Content */}
         <div className="w-full">
-          <article className="rounded-lg bg-white dark:bg-gray-800  mb-3 ">
+          <article className="rounded-lg bg-gray-800  mb-3 ">
             <div className="prose prose-lg max-w-none dark:prose-invert">
               
               {/* Code Example Section */}
               {post.code ? (
-                <div className="rounded-lg bg-gray-900 dark:bg-gray-950 overflow-hidden mb-2 relative">
-                  <div className="flex justify-between items-center p-3 bg-gray-800 dark:bg-gray-900 border-b border-gray-700">
-                    <span className="text-sm text-gray-300">{activeSection} Code Example</span>
-                    <button
-                      onClick={handleCopy}
-                      className="flex items-center space-x-1 px-3 py-1 rounded text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
-                    >
-                      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      <span>{copied ? 'Copied!' : 'Copy'}</span>
-                    </button>
-                  </div>
-                  <div className="p-6 overflow-x-auto">
+                <div className="rounded-lg  overflow-hidden mb-2 relative">
+                  
+                  <div className="p-4 overflow-x-auto">
                     <pre className="text-sm text-gray-300">
                       <code dangerouslySetInnerHTML={{ __html: processPostContent(post.code) }} />
                     </pre>

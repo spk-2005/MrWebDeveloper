@@ -40,9 +40,9 @@ export default function Navbar() {
 
   return (
     <>
-      <nav
-        className={`flex items-center justify-between px-4 sm:px-2 lg:px-8 sticky top-0 z-50 transition-all duration-500 backdrop-blur-md 
-                   bg-white/95 dark:bg-gray-900/95 text-gray-900 dark:text-white
+      <nav style={{backgroundColor:"#5e75a0ff"}}
+        className={`flex items-center justify-between px-1  sm:px-2 lg:px-8 sticky top-0 z-50 transition-all duration-500 backdrop-blur-md 
+                    text-gray-900 dark:text-white
                    border-b border-gray-200/50 dark:border-gray-700/50
                    ${scrolled 
                      ? 'shadow-xl border-opacity-100 dark:border-opacity-100' 
@@ -50,28 +50,20 @@ export default function Navbar() {
                    }`}
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center group relative">
+        <Link href="/" className="flex items-center group relative ">
           <div className="relative overflow-hidden rounded-xl group-hover:scale-105 transition-transform duration-300">
             <Image
               src='/logo.png'
               width={64}
               height={64}
               alt="CodeLearn Logo"
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl transition-all duration-300"
+              className="w-11 h-11 sm:w-20 sm:h-11 rounded-xl transition-all duration-300"
               priority
             />
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
             <div className="absolute inset-0 ring-2 ring-blue-500 ring-opacity-0 group-hover:ring-opacity-30 rounded-xl transition-all duration-300"></div>
           </div>
-          <div className="ml-3 hidden sm:block">
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
-              CodeLearn
-            </h1>
-            <div className="flex items-center space-x-1">
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 transition-colors duration-300">Master Web Development</p>
-              <Sparkles className="w-3 h-3 animate-pulse text-blue-500 dark:text-blue-400" />
-            </div>
-          </div>
+          
         </Link>
 
         {/* Desktop Menu */}
@@ -94,19 +86,6 @@ export default function Navbar() {
             );
           })}
           
-          {/* CTA Button */}
-          <Link
-            href="/HTML/Prerequisites"
-            className="group relative ml-4 overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-500 rounded-xl transition-all duration-300"></div>
-            <div className="relative px-4 xl:px-6 py-3 rounded-xl font-semibold transition-all duration-300 
-                           shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2
-                           bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-500 text-white">
-              <Zap className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
-              <span className="text-sm xl:text-base">Start Learning</span>
-            </div>
-          </Link>
         </div>
 
         {/* Mobile Toggle Button */}

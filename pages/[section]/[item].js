@@ -366,15 +366,7 @@ export default function ItemPage() {
         />
       </Head>
       
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-300">
-        
-        {/* Offline notification */}
-        {!isOnline && (
-          <div className="bg-orange-100 dark:bg-orange-900/30 border-l-4 border-orange-500 dark:border-orange-400 text-orange-800 dark:text-orange-200 text-center py-2 px-4 text-sm font-medium flex items-center justify-center space-x-2 transition-colors duration-300">
-            <WifiOff className="w-4 h-4" />
-            <span>You&apos;re offline. Some features may not work properly.</span>
-          </div>
-        )}
+      <div className="min-h-screen  flex flex-col  transition-colors duration-300">
 
         {/* Navigation */}
         <div className="sticky top-0 z-50">

@@ -139,7 +139,7 @@ function HomeContent() {
           </div>
         </div>
 
-        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 lg:py-24">
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-12">
           {/* Hero Content */}
           <div className={`text-center max-w-6xl mx-auto mb-12 sm:mb-20 transition-all duration-1000 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'

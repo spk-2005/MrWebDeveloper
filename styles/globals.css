@@ -9,19 +9,11 @@
 
 /* Theme transition styles */
 html {
+  
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Ensure dark mode background covers the entire page */
-html.dark {
-  background-color: #111827; /* gray-900 */
-  color: #f9fafb; /* gray-50 */
-}
 
-html.light {
-  background-color: #ffffff;
-  color: #111827; /* gray-900 */
-}
 
 /* Smooth transitions for all theme-related elements */
 * {
