@@ -23,6 +23,8 @@ function MyApp({ Component, pageProps }) {
   return (
     <>
     <Head>
+      
+        <meta name="google-adsense-account" content="ca-pub-4966899358935665"></meta>
       <meta name="google-site-verification" content="MoeiZ7kQur1i2YnchsT8JJCrNgmmGYqlvcIIXT_CCAE" />
     </Head>
       <PostsProvider>

@@ -669,7 +669,6 @@ export default function Home() {
             })
           }}
         />
-        <meta name="google-adsense-account" content="ca-pub-4966899358935665"></meta>
       </Head>
 
       <HomeContent />
