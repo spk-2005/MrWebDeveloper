@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Code, Palette, Zap, Wind, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
-import Link from 'next/link';
 
 // Define the sidebar data here so we can access the first item
 const sidebarData = {
@@ -8,34 +6,6 @@ const sidebarData = {
   'CSS': ['CSS Basics', 'CSS Selectors', 'CSS Properties', 'CSS Flexbox', 'CSS Grid'],
   'JavaScript': ['JS Introduction', 'Variables', 'Functions', 'DOM Manipulation', 'Events'],
   'Tailwind': ['Installation', 'Utility Classes', 'Responsive Design', 'Components', 'Customization']
-};
-
-// Section configurations for styling
-const sectionConfigs = {
-  'HTML': {
-    gradient: 'from-orange-400 to-red-500',
-    ring: 'ring-orange-500/20',
-    border: 'border-orange-300/50',
-    shadow: 'shadow-orange-500/25'
-  },
-  'CSS': {
-    gradient: 'from-blue-400 to-cyan-500',
-    ring: 'ring-blue-500/20',
-    border: 'border-blue-300/50',
-    shadow: 'shadow-blue-500/25'
-  },
-  'JavaScript': {
-    gradient: 'from-yellow-400 to-orange-500',
-    ring: 'ring-yellow-500/20',
-    border: 'border-yellow-300/50',
-    shadow: 'shadow-yellow-500/25'
-  },
-  'Tailwind': {
-    gradient: 'from-emerald-400 to-teal-500',
-    ring: 'ring-emerald-500/20',
-    border: 'border-emerald-300/50',
-    shadow: 'shadow-emerald-500/25'
-  }
 };
 
 export default function Navbar2({ activeSection }) {
@@ -53,41 +23,23 @@ export default function Navbar2({ activeSection }) {
   }, []);
 
   const navItems = [
-    { 
-      name: 'HTML', 
-      icon: Code, 
-      description: 'Structure & Markup'
-    },
-    { 
-      name: 'CSS', 
-      icon: Palette, 
-      description: 'Styling & Design'
-    },
-    { 
-      name: 'JavaScript', 
-      icon: Zap, 
-      description: 'Interactivity & Logic'
-    },
-    { 
-      name: 'Tailwind', 
-      icon: Wind, 
-      description: 'Utility-First CSS'
-    }
+    { name: 'HTML' },
+    { name: 'CSS' },
+    { name: 'JavaScript' },
+    { name: 'Tailwind' }
   ];
 
   // Prevent hydration mismatch
   if (!mounted) {
     return (
-      <nav className="shadow-2xl sticky z-40 backdrop-blur-sm">
-        <div className="px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 lg:h-18">
-            <div className="w-24 h-8 rounded animate-pulse"></div>
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center h-14 sm:h-16">
             <div className="flex space-x-2">
               {[1,2,3,4].map(i => (
-                <div key={i} className="w-20 h-10 rounded-xl animate-pulse border border-gray-200"></div>
+                <div key={i} className="w-16 sm:w-20 h-8 bg-gray-100 rounded animate-pulse"></div>
               ))}
             </div>
-            <div className="w-32 h-8 rounded animate-pulse border border-gray-200"></div>
           </div>
         </div>
       </nav>
@@ -95,78 +47,53 @@ export default function Navbar2({ activeSection }) {
   }
 
   return (
-    <nav className={`shadow-2xl sticky top-16 z-40 backdrop-blur-xl transition-all duration-300 ${
-      isScrolled ? 'shadow-2xl border-gray-200/50' : 'border-gray-100/50'
+    <nav className={`bg-white border-b sticky top-0 z-40 transition-colors duration-200 ${
+      isScrolled ? 'border-gray-300 shadow-sm' : 'border-gray-200'
     }`}>
-      <div className="px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-18">
-         
-          {/* Navigation Items */}
-          <div className="flex-1 flex justify-center">
-            <div className="overflow-x-auto scrollbar-hide max-w-5xl">
-              <div className="flex items-center space-x-1 sm:space-x-2 min-w-max px-2">
-                {navItems.map((item, index) => {
-                  const IconComponent = item.icon;
-                  const isActive = activeSection === item.name;
-                  const config = sectionConfigs[item.name];
-                  
-                  const firstItem = sidebarData[item.name] ? sidebarData[item.name][0] : null;
-                  const href = firstItem ? `/${item.name}/${firstItem.replace(/\s+/g, '-')}` : `/${item.name}`;
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-center h-14 sm:h-16">
+          
+          {/* Navigation Items Container */}
+          <div className="w-full max-w-4xl overflow-x-auto scrollbar-hide">
+            <div className="flex items-center justify-center space-x-2 sm:space-x-4 min-w-max px-2">
+              {navItems.map((item, index) => {
+                const isActive = activeSection === item.name;
+                const firstItem = sidebarData[item.name] ? sidebarData[item.name][0] : null;
+                const href = firstItem ? `/${item.name}/${firstItem.replace(/\s+/g, '-')}` : `/${item.name}`;
 
-                  return (
-                    <Link 
-                      key={index} 
-                      href={href}
-                      className={`
-                        group relative px-3 sm:px-4 lg:px-6 py-2.5 lg:py-3 rounded-xl text-sm font-semibold
-                        transition-all duration-300 ease-out transform hover:scale-105
-                        whitespace-nowrap min-w-[90px] sm:min-w-[120px] lg:min-w-[140px]
-                        focus:outline-none focus:ring-2
-                        ${isActive
-                          ? `border-2 ${config.border} shadow-xl ${config.shadow} ring-4 ${config.ring}`
-                          : 'border border-gray-200/60 hover:border-gray-300/80 shadow-lg hover:shadow-xl'
-                        }
-                      `}
-                    >
-                      <div className="relative flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2">
-                        {/* Glass morphism overlay */}
-                        <div className={`absolute inset-0 rounded-xl transition-all duration-300 ${
-                          isActive 
-                            ? `bg-gradient-to-br ${config.gradient} opacity-90` 
-                            : 'bg-gradient-to-br from-white/60 to-gray-50/40 opacity-0 group-hover:opacity-100'
-                        }`}></div>
-                        
-                        {/* Text */}
-                        <div className={`relative z-10 text-center sm:text-left ${isActive ? 'text-white' : 'text-gray-700 group-hover:text-gray-900'}`}>
-                          <span className="hidden sm:inline text-sm lg:text-base font-semibold transition-all duration-300">
-                            {item.name}
-                          </span>
-                          
-                          {/* Mobile text (abbreviated) */}
-                          <span className="sm:hidden text-xs font-medium">
-                            {item.name === 'JavaScript' ? 'JS' : item.name.slice(0, 4)}
-                          </span>
-                        </div>
-                      </div>
+                return (
+                  <button
+                    key={index} 
+                    onClick={() => console.log(`Navigate to ${href}`)}
+                    className={`
+                      px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-sm font-medium
+                      transition-colors duration-200 whitespace-nowrap
+                      min-w-[70px] sm:min-w-[90px]
+                      ${isActive
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 border border-transparent'
+                      }
+                    `}
+                  >
+                    <span className="text-center">
+                      {/* Ultra mobile text */}
+                      <span className="block sm:hidden">
+                        {item.name === 'JavaScript' ? 'JS' : item.name.slice(0, 4)}
+                      </span>
+                      
+                      {/* Desktop text */}
+                      <span className="hidden sm:block">
+                        {item.name}
+                      </span>
+                    </span>
 
-                      {/* Active indicator */}
-                      {isActive && (
-                        <>
-                          <div className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-gradient-to-r ${config.gradient} rounded-full`}></div>
-                          <div className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-4 h-0.5 bg-gradient-to-r ${config.gradient} rounded-full blur-sm animate-pulse`}></div>
-                        </>
-                      )}
-
-                      {/* Progress indicator for active item */}
-                      {isActive && (
-                        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl overflow-hidden">
-                          <div className={`h-full w-3/4 bg-gradient-to-r ${config.gradient} animate-pulse`}></div>
-                        </div>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
+                    {/* Simple active indicator */}
+                    {isActive && (
+                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-blue-600 rounded-full"></div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -180,6 +107,32 @@ export default function Navbar2({ activeSection }) {
         }
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
+        }
+        
+        .scrollbar-hide {
+          scroll-behavior: smooth;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior-x: contain;
+        }
+        
+        @media (max-width: 640px) {
+          .scrollbar-hide {
+            scroll-snap-type: x mandatory;
+          }
+          .scrollbar-hide > div > button {
+            scroll-snap-align: start;
+          }
+        }
+        
+        @media (max-width: 240px) {
+          .scrollbar-hide > div {
+            gap: 0.25rem;
+          }
+          .scrollbar-hide > div > button {
+            min-width: 60px !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+          }
         }
       `}</style>
     </nav>

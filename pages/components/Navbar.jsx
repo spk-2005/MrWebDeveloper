@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, Home, BookOpen, Code, ChevronDown, Sparkles, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +25,7 @@ export default function Navbar() {
   // Prevent hydration mismatch
   if (!mounted) {
     return (
-      <nav className="flex items-center justify-between px-6 lg:px-8     z-50 shadow-md backdrop-blur-md bg-white/90 dark:bg-gray-900/90 transition-colors duration-300">
+      <nav className="flex items-center justify-between px-6 lg:px-8 z-50 shadow-md backdrop-blur-md bg-white/90 dark:bg-gray-900/90 transition-colors duration-300">
         <div className="flex items-center">
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl animate-pulse bg-gray-200 dark:bg-gray-700"></div>
         </div>
@@ -42,7 +41,7 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`flex items-center justify-between px-4 sm:px-2 lg:px-8  sticky top-0 z-50 transition-all duration-500 backdrop-blur-md 
+        className={`flex items-center justify-between px-4 sm:px-2 lg:px-8 sticky top-0 z-50 transition-all duration-500 backdrop-blur-md 
                    bg-white/95 dark:bg-gray-900/95 text-gray-900 dark:text-white
                    border-b border-gray-200/50 dark:border-gray-700/50
                    ${scrolled 
@@ -76,7 +75,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Menu */}
-        <div className="hidden lg:flex items-center  xl:space-x-2">
+        <div className="hidden lg:flex items-center xl:space-x-2">
           {navlists.map((item, index) => {
             return (
               <Link
@@ -87,7 +86,6 @@ export default function Navbar() {
                           text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
               >
                 <div className="flex items-center space-x-2">
-                
                   <span className="text-sm xl:text-base">{item}</span>
                 </div>
                 <span className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-blue-500 dark:bg-blue-400 transition-all duration-300 group-hover:w-3/4 transform -translate-x-1/2 rounded-full"></span>
@@ -95,11 +93,6 @@ export default function Navbar() {
               </Link>
             );
           })}
-          
-          {/* Theme Toggle */}
-          <div className="ml-4">
-            <ThemeToggle />
-          </div>
           
           {/* CTA Button */}
           <Link
@@ -118,21 +111,17 @@ export default function Navbar() {
 
         {/* Mobile Toggle Button */}
         <div className="lg:hidden flex items-center space-x-2">
-          <ThemeToggle />
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="group relative p-3 rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 active:scale-95
-                      bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200/80 dark:hover:bg-gray-700/80"
+            className="group p-2 rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 active:scale-95
+                      hover:bg-gray-100 dark:hover:bg-gray-800"
             aria-label="Toggle mobile menu"
           >
-            <div className="relative w-6 h-6">
-              <div className={`absolute inset-0 transition-all duration-300 ${isOpen ? 'rotate-180 opacity-0' : 'rotate-0 opacity-100'}`}>
-                <Menu size={24} className="transition-colors duration-200 text-gray-700 dark:text-gray-200" />
-              </div>
-              <div className={`absolute inset-0 transition-all duration-300 ${isOpen ? 'rotate-0 opacity-100' : 'rotate-180 opacity-0'}`}>
-                <X size={24} className="transition-colors duration-200 text-gray-700 dark:text-gray-200" />
-              </div>
-            </div>
+            {isOpen ? (
+              <X size={24} className="group-hover:rotate-90 transition-transform duration-200 text-gray-700 dark:text-gray-200" />
+            ) : (
+              <Menu size={24} className="group-hover:scale-110 transition-transform duration-200 text-gray-700 dark:text-gray-200" />
+            )}
           </button>
         </div>
       </nav>
@@ -198,7 +187,9 @@ export default function Navbar() {
               >
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm
                                bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30">
-             
+                  {index === 0 && <Home className="w-5 h-5" />}
+                  {index === 1 && <BookOpen className="w-5 h-5" />}
+                  {index === 2 && <Code className="w-5 h-5" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm transition-colors duration-300">{item}</div>
@@ -220,8 +211,6 @@ export default function Navbar() {
                         shadow-lg hover:shadow-xl transform hover:-translate-y-1 active:scale-95
                         bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-500 text-white"
             >
-
-              
               <BookOpen className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
               <span>Start Learning Now</span>
               <Zap className="w-4 h-4 animate-pulse" />
@@ -258,7 +247,6 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-
     </>
   );
 }

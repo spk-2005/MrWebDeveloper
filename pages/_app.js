@@ -1,33 +1,41 @@
-
 // pages/_app.js
 import '../styles/globals.css';
-import { PostsProvider } from '../pages/components/PostContext';
-import AppLoadingScreen from '@/pages/components/AppLoadingScreen';
-import { ThemeProvider } from '../pages/components/ThemeContext'; // Make sure this path is correct
+import { PostsProvider } from './components/PostContext';
+import AppLoadingScreen from './components/AppLoadingScreen';
+import { useEffect } from 'react';
+import Head from 'next/head';
 
 function MyApp({ Component, pageProps }) {
+  // Apply initial theme-related styles to prevent flash
+  useEffect(() => {
+    // Ensure the HTML element has the proper classes for Tailwind
+    const html = document.documentElement;
+    
+    // Add transition classes for smooth theme switching
+    html.style.transition = 'background-color 0.3s ease, color 0.3s ease';
+    
+    // Cleanup function
+    return () => {
+      html.style.transition = '';
+    };
+  }, []);
+
   return (
     <>
-    <ThemeProvider>
+    <Head>
+      <meta name="google-site-verification" content="MoeiZ7kQur1i2YnchsT8JJCrNgmmGYqlvcIIXT_CCAE" />
+    </Head>
       <PostsProvider>
         <AppLoadingScreen>
-          <Component {...pageProps} />
+          {/* Theme toggle should be available globally */}
+          
+          {/* Main app content */}
+          <div className="min-h-screen transition-colors duration-300 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+            <Component {...pageProps} />
+          </div>
         </AppLoadingScreen>
       </PostsProvider>
-    </ThemeProvider>
-  </>);
+   </>);
 }
-
-// Add this to maintain Next.js compatibility
-MyApp.getInitialProps = async (appContext) => {
-  // Call page-level getInitialProps if it exists
-  let appProps = {};
-  
-  if (appContext.Component.getInitialProps) {
-    appProps = await appContext.Component.getInitialProps(appContext.ctx);
-  }
-  
-  return { ...appProps };
-};
 
 export default MyApp;

@@ -3,7 +3,6 @@ import Head from "next/head";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Navbar2 from "./components/Navbar2";
-import { ThemeProvider } from "./components/ThemeContext";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
@@ -55,7 +54,6 @@ function HomeContent() {
   const [isVisible, setIsVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
-  const [mounted, setMounted] = useState(false);
 
   const testimonials = [
     {
@@ -85,7 +83,6 @@ function HomeContent() {
   ];
 
   useEffect(() => {
-    setMounted(true);
     setIsVisible(true);
     
     const checkMobile = () => {
@@ -105,26 +102,10 @@ function HomeContent() {
       clearInterval(testimonialInterval);
     };
   }, [testimonials.length]);
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="animate-pulse">
-          <div className="h-16 bg-white/80 dark:bg-gray-800/80 shadow-md"></div>
-          <div className="h-20 bg-gray-900 dark:bg-gray-800"></div>
-          <div className="p-8 space-y-4">
-            <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
-            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
   
   return (
-    <div className={`min-h-screen  from-slate-50 via-blue-50 to-indigo-100 
-                    dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 
-                    transition-colors duration-500 ${geistSans.variable} ${geistMono.variable}`}>
+    <div className={`min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 
+                    transition-all duration-500 ${geistSans.variable} ${geistMono.variable}`}>
       <Navbar />
       <Navbar2
         activeSection={null}
@@ -136,24 +117,24 @@ function HomeContent() {
       <main className="relative overflow-hidden">
         {/* Enhanced Background decorations */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-20 -right-20 sm:-top-40 sm:-right-40 w-40 h-40 sm:w-80 sm:h-80 bg-blue-400/10 dark:bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-20 -left-20 sm:-bottom-40 sm:-left-40 w-40 h-40 sm:w-80 sm:h-80 bg-indigo-400/10 dark:bg-indigo-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 sm:w-96 sm:h-96 bg-purple-400/5 dark:bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
+          <div className="absolute -top-20 -right-20 sm:-top-40 sm:-right-40 w-40 h-40 sm:w-80 sm:h-80 bg-blue-400/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-20 -left-20 sm:-bottom-40 sm:-left-40 w-40 h-40 sm:w-80 sm:h-80 bg-indigo-400/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 sm:w-96 sm:h-96 bg-purple-400/5 rounded-full blur-3xl animate-pulse delay-2000"></div>
           
           {/* Floating Code Elements */}
           <div className="absolute top-20 left-10 opacity-20">
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
-              <code className="text-xs text-blue-600 dark:text-blue-400">&lt;html&gt;</code>
+            <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-gray-200">
+              <code className="text-xs text-blue-600">&lt;html&gt;</code>
             </div>
           </div>
           <div className="absolute top-40 right-20 opacity-20 animate-bounce delay-500">
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
-              <code className="text-xs text-green-600 dark:text-green-400">.class</code>
+            <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-gray-200">
+              <code className="text-xs text-green-600">.class</code>
             </div>
           </div>
           <div className="absolute bottom-40 left-20 opacity-20 animate-bounce delay-1000">
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
-              <code className="text-xs text-purple-600 dark:text-purple-400">console.log()</code>
+            <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-gray-200">
+              <code className="text-xs text-purple-600">console.log()</code>
             </div>
           </div>
         </div>
@@ -163,31 +144,31 @@ function HomeContent() {
           <div className={`text-center max-w-6xl mx-auto mb-12 sm:mb-20 transition-all duration-1000 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}>
-            <div className="inline-flex items-center px-4 py-3 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 
-                           text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium mb-6 backdrop-blur-sm 
-                           border border-blue-200/50 dark:border-blue-700/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+            <div className="inline-flex items-center px-4 py-3 bg-gradient-to-r from-blue-100 to-purple-100 
+                           text-blue-800 rounded-full text-sm font-medium mb-6 backdrop-blur-sm 
+                           border border-blue-200/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
               <Star className="w-4 h-4 mr-2 animate-spin" />
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent font-semibold">
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-semibold">
                 🚀 Start Your Web Development Journey Today
               </span>
               <Sparkles className="w-4 h-4 ml-2 animate-pulse" />
             </div>
             
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-slate-900 dark:text-white mb-6 leading-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-slate-900 mb-6 leading-tight">
               Master{" "}
-              <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 dark:from-blue-400 dark:via-purple-400 dark:to-indigo-400 bg-clip-text text-transparent animate-pulse">
+              <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent animate-pulse">
                 Web Development
               </span>
               <br />
-              <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-slate-700 dark:text-gray-300 flex items-center justify-center mt-4">
+              <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-slate-700 flex items-center justify-center mt-4">
                 From Zero to Hero
                 <Trophy className="w-8 h-8 sm:w-10 sm:h-10 ml-4 text-yellow-500 animate-bounce" />
               </span>
             </h1>
             
-            <p className="text-lg sm:text-xl md:text-2xl text-slate-600 dark:text-gray-300 max-w-4xl mx-auto mb-8 leading-relaxed px-4">
+            <p className="text-lg sm:text-xl md:text-2xl text-slate-600 max-w-4xl mx-auto mb-8 leading-relaxed px-4">
               Master the fundamentals of web development with our comprehensive, hands-on tutorials. 
-              Learn <span className="font-semibold text-orange-600 dark:text-orange-400">HTML</span>, <span className="font-semibold text-blue-600 dark:text-blue-400">CSS</span>, <span className="font-semibold text-yellow-600 dark:text-yellow-400">JavaScript</span>, and <span className="font-semibold text-green-600 dark:text-green-400">Tailwind CSS</span> through practical projects and real-world examples.
+              Learn <span className="font-semibold text-orange-600">HTML</span>, <span className="font-semibold text-blue-600">CSS</span>, <span className="font-semibold text-yellow-600">JavaScript</span>, and <span className="font-semibold text-green-600">Tailwind CSS</span> through practical projects and real-world examples.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 px-4">
@@ -204,10 +185,10 @@ function HomeContent() {
               </Link>
               
               <Link href="/CSS/CSS-Basics" className="group w-full sm:w-auto">
-                <div className="px-8 py-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-slate-700 dark:text-gray-200 
-                              border-2 border-slate-200 dark:border-gray-600 rounded-xl font-semibold 
-                              hover:bg-white dark:hover:bg-gray-700 hover:border-blue-300 dark:hover:border-blue-500 
-                              hover:text-blue-700 dark:hover:text-blue-300 hover:shadow-xl transition-all duration-300 
+                <div className="px-8 py-4 bg-white/90 backdrop-blur-sm text-slate-700 
+                              border-2 border-slate-200 rounded-xl font-semibold 
+                              hover:bg-white hover:border-blue-300 
+                              hover:text-blue-700 hover:shadow-xl transition-all duration-300 
                               transform hover:-translate-y-1 flex items-center justify-center space-x-2 min-w-[220px] text-lg">
                   <Palette className="w-5 h-5" />
                   <span>Explore CSS</span>
@@ -219,18 +200,18 @@ function HomeContent() {
             {/* Enhanced Stats with Animations */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto px-4">
               {[
-                { icon: Users, value: "15K+", label: "Active Learners", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-900/30", border: "border-blue-200 dark:border-blue-700" },
-                { icon: BookOpen, value: "50+", label: "Comprehensive Tutorials", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/30", border: "border-green-200 dark:border-green-700" },
-                { icon: Award, value: "98%", label: "Success Rate", color: "text-yellow-600 dark:text-yellow-400", bg: "bg-yellow-100 dark:bg-yellow-900/30", border: "border-yellow-200 dark:border-yellow-700" },
-                { icon: Globe, value: "100+", label: "Countries", color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-900/30", border: "border-purple-200 dark:border-purple-700" }
+                { icon: Users, value: "15K+", label: "Active Learners", color: "text-blue-600", bg: "bg-blue-100", border: "border-blue-200" },
+                { icon: BookOpen, value: "50+", label: "Comprehensive Tutorials", color: "text-green-600", bg: "bg-green-100", border: "border-green-200" },
+                { icon: Award, value: "98%", label: "Success Rate", color: "text-yellow-600", bg: "bg-yellow-100", border: "border-yellow-200" },
+                { icon: Globe, value: "100+", label: "Countries", color: "text-purple-600", bg: "bg-purple-100", border: "border-purple-200" }
               ].map((stat, index) => (
-                <div key={index} className={`text-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border ${stat.border} 
+                <div key={index} className={`text-center bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border ${stat.border} 
                                            hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group`}>
                   <div className={`inline-flex items-center justify-center w-16 h-16 ${stat.bg} rounded-full mb-4 group-hover:scale-110 transition-transform duration-300`}>
                     <stat.icon className={`w-8 h-8 ${stat.color}`} />
                   </div>
-                  <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{stat.value}</div>
-                  <p className="text-slate-600 dark:text-gray-300 text-sm leading-tight">{stat.label}</p>
+                  <div className="text-3xl font-bold text-slate-900 mb-1">{stat.value}</div>
+                  <p className="text-slate-600 text-sm leading-tight">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -242,10 +223,10 @@ function HomeContent() {
           }`}>
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-12">
-                <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+                <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
                   Learn on Any Device
                 </h2>
-                <p className="text-lg text-slate-600 dark:text-gray-300">
+                <p className="text-lg text-slate-600">
                   Responsive design ensures perfect learning experience across all devices
                 </p>
               </div>
@@ -254,31 +235,31 @@ function HomeContent() {
                 {/* Desktop */}
                 <div className="flex justify-center items-end space-x-8">
                   <div className="hidden lg:block">
-                    <div className="bg-gray-800 dark:bg-gray-700 rounded-t-2xl p-4 w-80 shadow-2xl">
-                      <div className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-lg">
+                    <div className="bg-gray-800 rounded-t-2xl p-4 w-80 shadow-2xl">
+                      <div className="bg-white rounded-lg overflow-hidden shadow-lg">
                         <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-32 flex items-center justify-center">
                           <Monitor className="w-12 h-12 text-white" />
                         </div>
                         <div className="p-4 space-y-2">
-                          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                          <div className="h-2 bg-gray-200 rounded"></div>
+                          <div className="h-2 bg-gray-200 rounded w-3/4"></div>
                         </div>
                       </div>
                     </div>
-                    <div className="bg-gray-800 dark:bg-gray-700 w-80 h-6 rounded-b-3xl"></div>
-                    <div className="bg-gray-700 dark:bg-gray-600 w-20 h-8 mx-auto rounded-b-lg"></div>
+                    <div className="bg-gray-800 w-80 h-6 rounded-b-3xl"></div>
+                    <div className="bg-gray-700 w-20 h-8 mx-auto rounded-b-lg"></div>
                   </div>
                   
                   {/* Tablet */}
                   <div className="hidden md:block">
-                    <div className="bg-gray-800 dark:bg-gray-700 rounded-2xl p-3 w-56 shadow-2xl">
-                      <div className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-lg">
+                    <div className="bg-gray-800 rounded-2xl p-3 w-56 shadow-2xl">
+                      <div className="bg-white rounded-xl overflow-hidden shadow-lg">
                         <div className="bg-gradient-to-r from-green-500 to-blue-500 h-40 flex items-center justify-center">
                           <Tablet className="w-10 h-10 text-white" />
                         </div>
                         <div className="p-3 space-y-2">
-                          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                          <div className="h-2 bg-gray-200 rounded"></div>
+                          <div className="h-2 bg-gray-200 rounded w-2/3"></div>
                         </div>
                       </div>
                     </div>
@@ -286,14 +267,14 @@ function HomeContent() {
                   
                   {/* Mobile */}
                   <div className="mb-8">
-                    <div className="bg-gray-800 dark:bg-gray-700 rounded-3xl p-2 w-32 shadow-2xl">
-                      <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-lg">
+                    <div className="bg-gray-800 rounded-3xl p-2 w-32 shadow-2xl">
+                      <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
                         <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-48 flex items-center justify-center">
                           <Smartphone className="w-8 h-8 text-white" />
                         </div>
                         <div className="p-2 space-y-1">
-                          <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                          <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                          <div className="h-1 bg-gray-200 rounded"></div>
+                          <div className="h-1 bg-gray-200 rounded w-1/2"></div>
                         </div>
                       </div>
                     </div>
@@ -308,10 +289,10 @@ function HomeContent() {
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}>
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white mb-4">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
                 Choose Your Learning Path
               </h2>
-              <p className="text-lg sm:text-xl text-slate-600 dark:text-gray-300 max-w-3xl mx-auto">
+              <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto">
                 Start with any technology and progress at your own pace with our structured curriculum designed by industry experts
               </p>
             </div>
@@ -327,9 +308,9 @@ function HomeContent() {
                   'HTML': {
                     icon: Code,
                     gradient: 'from-orange-500 to-red-500',
-                    bgGradient: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20',
-                    borderColor: 'border-orange-200 dark:border-orange-700',
-                    textColor: 'text-orange-700 dark:text-orange-300',
+                    bgGradient: 'from-orange-50 to-red-50',
+                    borderColor: 'border-orange-200',
+                    textColor: 'text-orange-700',
                     hoverShadow: 'hover:shadow-orange-500/25',
                     description: 'Structure & Markup Language',
                     difficulty: 'Beginner Friendly'
@@ -337,9 +318,9 @@ function HomeContent() {
                   'CSS': {
                     icon: Palette,
                     gradient: 'from-blue-500 to-indigo-500',
-                    bgGradient: 'from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20',
-                    borderColor: 'border-blue-200 dark:border-blue-700',
-                    textColor: 'text-blue-700 dark:text-blue-300',
+                    bgGradient: 'from-blue-50 to-indigo-50',
+                    borderColor: 'border-blue-200',
+                    textColor: 'text-blue-700',
                     hoverShadow: 'hover:shadow-blue-500/25',
                     description: 'Styling & Visual Design',
                     difficulty: 'Beginner to Intermediate'
@@ -347,9 +328,9 @@ function HomeContent() {
                   'JavaScript': {
                     icon: Zap,
                     gradient: 'from-yellow-500 to-orange-500',
-                    bgGradient: 'from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20',
-                    borderColor: 'border-yellow-200 dark:border-yellow-700',
-                    textColor: 'text-yellow-700 dark:text-yellow-300',
+                    bgGradient: 'from-yellow-50 to-orange-50',
+                    borderColor: 'border-yellow-200',
+                    textColor: 'text-yellow-700',
                     hoverShadow: 'hover:shadow-yellow-500/25',
                     description: 'Programming & Interactivity',
                     difficulty: 'Intermediate'
@@ -357,9 +338,9 @@ function HomeContent() {
                   'Tailwind': {
                     icon: Wind,
                     gradient: 'from-green-500 to-teal-500',
-                    bgGradient: 'from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20',
-                    borderColor: 'border-green-200 dark:border-green-700',
-                    textColor: 'text-green-700 dark:text-green-300',
+                    bgGradient: 'from-green-50 to-teal-50',
+                    borderColor: 'border-green-200',
+                    textColor: 'text-green-700',
                     hoverShadow: 'hover:shadow-green-500/25',
                     description: 'Utility-First CSS Framework',
                     difficulty: 'Intermediate'
@@ -375,7 +356,7 @@ function HomeContent() {
                     href={href}
                     className={`group block transition-all duration-500 delay-${index * 100} hover:scale-105`}
                   >
-                    <div className={`relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl shadow-lg hover:shadow-2xl ${config.hoverShadow}
+                    <div className={`relative bg-white/95 backdrop-blur-sm rounded-3xl shadow-lg hover:shadow-2xl ${config.hoverShadow}
                                   transition-all duration-500 transform hover:-translate-y-3
                                   p-8 text-center border ${config.borderColor} h-full overflow-hidden`}>
                       
@@ -392,24 +373,24 @@ function HomeContent() {
                           <IconComponent className="w-10 h-10" />
                         </div>
                         
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-slate-800 dark:group-hover:text-gray-100">
+                        <h3 className="text-2xl font-bold text-slate-900 mb-3 group-hover:text-slate-800 transition-colors duration-300">
                           {section}
                         </h3>
                         
-                        <p className="text-slate-600 dark:text-gray-300 mb-4 group-hover:text-slate-700 dark:group-hover:text-gray-200 leading-relaxed">
+                        <p className="text-slate-600 mb-4 group-hover:text-slate-700 leading-relaxed transition-colors duration-300">
                           {config.description}
                         </p>
                         
                         <div className="space-y-3 mb-6">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-500 dark:text-white-400">Lessons:</span>
+                            <span className="text-slate-500">Lessons:</span>
                             <span className={`font-semibold ${config.textColor}`}>{items.length}</span>
                           </div>
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-500 dark:text-gray-400">Level:</span>
-                            <span className="text-slate-600 dark:text-gray-300 font-medium">{config.difficulty}</span>
+                            <span className="text-slate-500">Level:</span>
+                            <span className="text-slate-600 font-medium">{config.difficulty}</span>
                           </div>
-                          <div className="text-xs text-slate-500 dark:text-gray-400">
+                          <div className="text-xs text-slate-500">
                             Start with: <span className={`font-semibold ${config.textColor}`}>{firstItem}</span>
                           </div>
                         </div>
@@ -422,7 +403,7 @@ function HomeContent() {
 
                         {/* Progress indicator */}
                         <div className="mt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div className="w-full bg-gray-200 rounded-full h-2">
                             <div className={`bg-gradient-to-r ${config.gradient} h-2 rounded-full transition-all duration-1000 group-hover:w-full w-0`}></div>
                           </div>
                         </div>
@@ -430,7 +411,7 @@ function HomeContent() {
 
                       {/* Decorative elements */}
                       <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
-                        <IconComponent className="w-16 h-16 text-slate-400 dark:text-gray-500" />
+                        <IconComponent className="w-16 h-16 text-slate-400" />
                       </div>
                     </div>
                   </Link>
@@ -444,25 +425,25 @@ function HomeContent() {
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}>
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
                 What Our Students Say
               </h2>
-              <p className="text-lg text-slate-600 dark:text-gray-300">
+              <p className="text-lg text-slate-600">
                 Join thousands of successful developers who started their journey with CodeLearn
               </p>
             </div>
 
             <div className="max-w-4xl mx-auto">
-              <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 lg:p-12 
-                             border border-white/20 dark:border-gray-700/20 relative overflow-hidden">
+              <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 lg:p-12 
+                             border border-white/20 relative overflow-hidden transition-all duration-300">
                 {/* Background decoration */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100 to-purple-100 
                                rounded-full -translate-y-16 translate-x-16 opacity-50"></div>
                 
                 <div className="relative">
-                  <div className="text-6xl text-blue-600 dark:text-blue-400 mb-6">&quot;</div>
+                  <div className="text-6xl text-blue-600 mb-6">&quot;</div>
                   <div className="transition-all duration-500">
-                    <blockquote className="text-xl lg:text-2xl text-slate-700 dark:text-gray-200 mb-8 leading-relaxed font-medium">
+                    <blockquote className="text-xl lg:text-2xl text-slate-700 mb-8 leading-relaxed font-medium">
                       {testimonials[currentTestimonial].content}
                     </blockquote>
                     
@@ -470,10 +451,10 @@ function HomeContent() {
                       <div className="flex items-center space-x-4">
                         <div className="text-4xl">{testimonials[currentTestimonial].avatar}</div>
                         <div>
-                          <div className="font-bold text-slate-900 dark:text-white text-lg">
+                          <div className="font-bold text-slate-900 text-lg">
                             {testimonials[currentTestimonial].name}
                           </div>
-                          <div className="text-slate-600 dark:text-gray-300">
+                          <div className="text-slate-600">
                             {testimonials[currentTestimonial].role} at {testimonials[currentTestimonial].company}
                           </div>
                         </div>
@@ -496,8 +477,8 @@ function HomeContent() {
                       onClick={() => setCurrentTestimonial(index)}
                       className={`w-3 h-3 rounded-full transition-all duration-300 ${
                         index === currentTestimonial 
-                          ? 'bg-blue-600 dark:bg-blue-400 w-8' 
-                          : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
+                          ? 'bg-blue-600 w-8' 
+                          : 'bg-gray-300 hover:bg-gray-400'
                       }`}
                     />
                   ))}
@@ -510,8 +491,8 @@ function HomeContent() {
           <div className={`px-4 transition-all duration-1000 delay-900 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}>
-            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 lg:p-16 
-                           border border-white/20 dark:border-gray-700/20 relative overflow-hidden max-w-6xl mx-auto">
+            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 lg:p-16 
+                           border border-white/20 relative overflow-hidden max-w-6xl mx-auto transition-all duration-300">
               {/* Background pattern */}
               <div className="absolute inset-0 opacity-5">
                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500"></div>
@@ -519,11 +500,11 @@ function HomeContent() {
 
               <div className="relative z-10">
                 <div className="text-center mb-16">
-                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white mb-6 flex items-center justify-center">
+                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-6 flex items-center justify-center">
                     Why Choose CodeLearn?
                     <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 ml-4 text-green-500" />
                   </h2>
-                  <p className="text-lg sm:text-xl text-slate-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
+                  <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
                     Experience the most effective way to learn web development with our proven methodology and comprehensive curriculum
                   </p>
                 </div>
@@ -535,7 +516,7 @@ function HomeContent() {
                       title: "Comprehensive Content",
                       description: "Detailed explanations with practical examples, interactive demos, and real-world applications that prepare you for professional development careers.",
                       gradient: "from-blue-500 to-indigo-500",
-                      bg: "bg-blue-50 dark:bg-blue-900/20",
+                      bg: "bg-blue-50",
                       features: ["50+ Tutorials", "Interactive Examples", "Real Projects"]
                     },
                     {
@@ -543,7 +524,7 @@ function HomeContent() {
                       title: "Progressive Learning",
                       description: "Carefully structured learning path that takes you from absolute beginner to advanced concepts with confidence and complete mastery.",
                       gradient: "from-green-500 to-teal-500",
-                      bg: "bg-green-50 dark:bg-green-900/20",
+                      bg: "bg-green-50",
                       features: ["Structured Path", "Skill Building", "Progress Tracking"]
                     },
                     {
@@ -551,7 +532,7 @@ function HomeContent() {
                       title: "Hands-on Practice",
                       description: "Interactive coding exercises, live examples, and practical projects that reinforce your learning and build an impressive portfolio.",
                       gradient: "from-purple-500 to-pink-500",
-                      bg: "bg-purple-50 dark:bg-purple-900/20",
+                      bg: "bg-purple-50",
                       features: ["Live Coding", "Project Building", "Portfolio Ready"]
                     },
                     {
@@ -559,7 +540,7 @@ function HomeContent() {
                       title: "Learn at Your Pace",
                       description: "Flexible learning schedule that adapts to your lifestyle. Study when you want, where you want, at the speed that works for you.",
                       gradient: "from-orange-500 to-red-500",
-                      bg: "bg-orange-50 dark:bg-orange-900/20",
+                      bg: "bg-orange-50",
                       features: ["24/7 Access", "Mobile Friendly", "Self-Paced"]
                     },
                     {
@@ -567,7 +548,7 @@ function HomeContent() {
                       title: "Community Support",
                       description: "Join a thriving community of learners and experienced developers. Get help, share knowledge, and grow together.",
                       gradient: "from-cyan-500 to-blue-500",
-                      bg: "bg-cyan-50 dark:bg-cyan-900/20",
+                      bg: "bg-cyan-50",
                       features: ["Active Community", "Peer Support", "Expert Guidance"]
                     },
                     {
@@ -575,25 +556,25 @@ function HomeContent() {
                       title: "Career Ready",
                       description: "Build real-world skills that employers want. Our curriculum is designed with input from industry professionals and hiring managers.",
                       gradient: "from-violet-500 to-purple-500",
-                      bg: "bg-violet-50 dark:bg-violet-900/20",
+                      bg: "bg-violet-50",
                       features: ["Industry Relevant", "Job Ready Skills", "Career Support"]
                     }
                   ].map((feature, index) => (
                     <div key={index} className={`text-center group hover:${feature.bg} rounded-2xl p-6 transition-all duration-300 
-                                                hover:shadow-lg border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600
-                                                bg-white/50 dark:bg-gray-800/50`}>
+                                                hover:shadow-lg border border-gray-100 hover:border-gray-200
+                                                bg-white/50`}>
                       <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl 
                                     flex items-center justify-center mx-auto mb-6 shadow-lg
                                     group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
                         <feature.icon className="w-8 h-8 text-white" />
                       </div>
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">{feature.title}</h3>
-                      <p className="text-slate-600 dark:text-gray-300 leading-relaxed mb-6">
+                      <h3 className="text-xl font-bold text-slate-900 mb-4">{feature.title}</h3>
+                      <p className="text-slate-600 leading-relaxed mb-6">
                         {feature.description}
                       </p>
                       <div className="space-y-2">
                         {feature.features.map((item, idx) => (
-                          <div key={idx} className="flex items-center justify-center space-x-2 text-sm text-slate-500 dark:text-gray-400">
+                          <div key={idx} className="flex items-center justify-center space-x-2 text-sm text-slate-500">
                             <CheckCircle className="w-4 h-4 text-green-500" />
                             <span>{item}</span>
                           </div>
@@ -604,11 +585,11 @@ function HomeContent() {
                 </div>
 
                 {/* Call to Action */}
-                <div className="text-center mt-16 pt-12 border-t border-gray-200 dark:border-gray-700">
-                  <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-6">
+                <div className="text-center mt-16 pt-12 border-t border-gray-200">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-6">
                     Ready to Start Your Journey?
                   </h3>
-                  <p className="text-lg text-slate-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+                  <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
                     Join thousands of successful developers who chose CodeLearn to master web development. 
                     Your future in tech starts here!
                   </p>
@@ -621,7 +602,7 @@ function HomeContent() {
                       <span>Start Learning Now</span>
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
-                    <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-gray-400">
+                    <div className="flex items-center space-x-4 text-sm text-slate-500">
                       <div className="flex items-center space-x-1">
                         <Heart className="w-4 h-4 text-red-500" />
                         <span>Free Forever</span>
@@ -646,8 +627,7 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <ThemeProvider>
-      <Head>
+     <> <Head>
         <title>CodeLearn - Master Web Development | HTML, CSS, JavaScript, Tailwind CSS</title>
         <meta name="description" content="Learn web development from scratch with CodeLearn. Complete tutorials covering HTML, CSS, JavaScript, and Tailwind CSS. Interactive examples, structured learning path, and hands-on projects." />
         <meta name="keywords" content="web development, HTML tutorial, CSS tutorial, JavaScript tutorial, Tailwind CSS, programming tutorials, learn coding, frontend development" />
@@ -692,6 +672,6 @@ export default function Home() {
       </Head>
 
       <HomeContent />
-    </ThemeProvider>
+      </>
   );
 }

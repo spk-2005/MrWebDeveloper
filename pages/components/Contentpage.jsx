@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   ChevronRight, 
   Heart, 
@@ -15,6 +15,82 @@ import {
   MessageCircle,
   ChevronLeft
 } from 'lucide-react';
+import Link from 'next/link';
+
+// New ShareModal component
+const ShareModal = ({ title, text, url, onClose }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy share text:', err);
+    }
+  };
+
+  const socialLinks = useMemo(() => [
+    { name: 'Twitter', icon: '🐦', href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}` },
+    { name: 'LinkedIn', icon: '👔', href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}` },
+    { name: 'WhatsApp', icon: '🟢', href: `https://api.whatsapp.com/send?text=${encodeURIComponent(text)} ${encodeURIComponent(url)}` },
+    { name: 'Facebook', icon: '🔵', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
+  ], [text, url]);
+
+  return (
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-50 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl w-full max-w-md shadow-2xl relative">
+        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Share This Tutorial</h3>
+        
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Spread the knowledge! Share this great tutorial with your friends and colleagues.
+        </p>
+
+        <textarea
+          readOnly
+          value={text}
+          className="w-full p-3 mb-4 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 resize-none"
+          rows="4"
+        />
+
+        <div className="flex justify-between items-center mb-4">
+          <button 
+            onClick={handleCopy}
+            className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-all bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+            disabled={copied}
+          >
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            <span>{copied ? 'Copied!' : 'Copy Text'}</span>
+          </button>
+          
+          <button 
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+        
+        <div className="flex space-x-3 justify-center border-t border-gray-200 dark:border-gray-700 pt-4">
+          {socialLinks.map(link => (
+            <a 
+              key={link.name} 
+              href={link.href} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="p-3 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-xl"
+              aria-label={`Share on ${link.name}`}
+            >
+              {link.icon}
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 export default function Contentpage({ 
   activeSection, 
@@ -28,6 +104,9 @@ export default function Contentpage({
   const [bookmarked, setBookmarked] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [isLiking, setIsLiking] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false); // New state for share modal
 
   const post = contentData;
   const error = post === null;
@@ -42,7 +121,13 @@ export default function Contentpage({
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (post) {
+      setLikeCount(post.likes || 0);
+      // Check if user has already liked this post from localStorage
+      const userLikes = JSON.parse(localStorage.getItem('userLikes') || '{}');
+      setLiked(userLikes[post.id] || false);
+    }
+  }, [post]);
 
   const handleSetActiveItem = (item) => {
     if (setActiveItem && typeof setActiveItem === 'function') {
@@ -56,15 +141,83 @@ export default function Contentpage({
     }
   };
 
-  const handleLike = () => {
-    setLiked(!liked);
-  };
+  const handleLike = useCallback(async () => {
+    if (!post || !post.id || isLiking) {
+      console.log('Cannot like: missing post data or already processing');
+      return;
+    }
+    
+    setIsLiking(true);
+    const previousLiked = liked;
+    const previousCount = likeCount;
+    
+    // Optimistic update
+    const newLiked = !liked;
+    setLiked(newLiked);
+    setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
+    
+    // Update localStorage
+    const userLikes = JSON.parse(localStorage.getItem('userLikes') || '{}');
+    userLikes[post.id] = newLiked;
+    localStorage.setItem('userLikes', JSON.stringify(userLikes));
+    
+    try {
+      const response = await fetch(`/api/posts/${post.id}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: previousLiked ? 'unlike' : 'like'
+        })
+      });
 
-  const handleBookmark = () => {
-    setBookmarked(!bookmarked);
-  };
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-  const handleCopy = async () => {
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update with server response
+        setLikeCount(data.likes);
+        console.log(`Successfully ${previousLiked ? 'unliked' : 'liked'} post`);
+      } else {
+        throw new Error(data.error || 'Failed to update like');
+      }
+      
+    } catch (error) {
+      console.error('Error updating like:', error);
+      
+      // Revert optimistic update on error
+      setLiked(previousLiked);
+      setLikeCount(previousCount);
+      
+      // Revert localStorage
+      const userLikes = JSON.parse(localStorage.getItem('userLikes') || '{}');
+      userLikes[post.id] = previousLiked;
+      localStorage.setItem('userLikes', JSON.stringify(userLikes));
+      
+      // Show error message to user
+      alert('Failed to update like. Please try again.');
+    } finally {
+      setIsLiking(false);
+    }
+  }, [post, isLiking, liked, likeCount]);
+
+  const handleBookmark = useCallback(() => {
+    if (!post || !post.id) return;
+    
+    const newBookmarked = !bookmarked;
+    setBookmarked(newBookmarked);
+    
+    // Update localStorage for bookmarks
+    const userBookmarks = JSON.parse(localStorage.getItem('userBookmarks') || '{}');
+    userBookmarks[post.id] = newBookmarked;
+    localStorage.setItem('userBookmarks', JSON.stringify(userBookmarks));
+  }, [post, bookmarked]);
+
+  const handleCopy = useCallback(async () => {
     if (post?.code) {
       try {
         await navigator.clipboard.writeText(post.code.replace(/<br>/g, '\n').replace(/&nbsp;/g, ' '));
@@ -74,7 +227,30 @@ export default function Contentpage({
         console.error('Failed to copy code:', err);
       }
     }
-  };
+  }, [post]);
+
+  const handleShare = useCallback(async () => {
+    const shareTitle = `${activeItem} - ${activeSection} Tutorial`;
+    const shareText = `Mastering ${activeItem} with CodeLearn! This tutorial is a game-changer for understanding ${activeSection}. Check it out:`;
+    const shareUrl = window.location.href;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.log('Error sharing with Web Share API:', err);
+        // Fallback to custom modal
+        setShowShareModal(true);
+      }
+    } else {
+      // Fallback to custom modal on desktop
+      setShowShareModal(true);
+    }
+  }, [activeItem, activeSection]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Recently updated';
@@ -111,19 +287,27 @@ export default function Contentpage({
     return currentIndex > 0 ? lessons[currentIndex - 1] : null;
   };
 
-  const handleNextLesson = () => {
+  const handleNextLesson = useCallback(() => {
     const nextLesson = getNextLesson();
     if (nextLesson) {
       handleSetActiveItem(nextLesson);
     }
-  };
+  }, [getNextLesson]);
 
-  const handlePreviousLesson = () => {
+  const handlePreviousLesson = useCallback(() => {
     const previousLesson = getPreviousLesson();
     if (previousLesson) {
       handleSetActiveItem(previousLesson);
     }
-  };
+  }, [getPreviousLesson]);
+
+  // Load user preferences on mount
+  useEffect(() => {
+    if (post && post.id) {
+      const userBookmarks = JSON.parse(localStorage.getItem('userBookmarks') || '{}');
+      setBookmarked(userBookmarks[post.id] || false);
+    }
+  }, [post]);
 
   if (!mounted) {
     return (
@@ -198,6 +382,14 @@ export default function Contentpage({
 
   return (
     <div className="w-full h-full">
+      {showShareModal && (
+        <ShareModal
+          title={`${activeItem} - ${activeSection} Tutorial`}
+          text={`Mastering ${activeItem} with CodeLearn! This tutorial is a game-changer for understanding ${activeSection}. Check it out: ${window.location.href}`}
+          url={window.location.href}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
       <div className="">
         {/* Breadcrumb & Actions */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between ">
@@ -222,14 +414,19 @@ export default function Contentpage({
           <div className="flex items-center space-x-2">
             <button 
               onClick={handleLike}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all text-sm border
+              disabled={isLiking}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all text-sm border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
                 ${liked 
                   ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300' 
                   : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                 }`}
             >
-              <Heart className={`w-4 h-4 ${liked ? 'fill-current text-red-500' : ''}`} />
-              <span>{(post.likes || 0) + (liked ? 1 : 0)}</span>
+              {isLiking ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Heart className={`w-4 h-4 ${liked ? 'fill-current text-red-500' : ''}`} />
+              )}
+              <span>{likeCount}</span>
             </button>
             
             <button 
@@ -243,30 +440,43 @@ export default function Contentpage({
               <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />
             </button>
             
-            <button className="p-2 rounded-lg transition-all border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+            <button 
+              onClick={handleShare}
+              className="p-2 rounded-lg transition-all border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            >
               <Share2 className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Title & Meta Info */}
-        <div className="mb-8">
+        <div className="mb-2">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-gray-900 dark:text-white">
             {activeItem}
           </h1>
           <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
             <span>Updated: {formatDate(post.lastUpdated)}</span>
-            </div>
+          </div>
         </div>
 
         {/* Main Content */}
         <div className="w-full">
-          <article className="rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 lg:p-8 mb-8 shadow-sm">
+          <article className="rounded-lg bg-white dark:bg-gray-800  mb-3 ">
             <div className="prose prose-lg max-w-none dark:prose-invert">
               
               {/* Code Example Section */}
               {post.code ? (
-                <div className="rounded-lg bg-gray-900 dark:bg-gray-950 overflow-hidden mb-2 border border-gray-700">
+                <div className="rounded-lg bg-gray-900 dark:bg-gray-950 overflow-hidden mb-2 relative">
+                  <div className="flex justify-between items-center p-3 bg-gray-800 dark:bg-gray-900 border-b border-gray-700">
+                    <span className="text-sm text-gray-300">{activeSection} Code Example</span>
+                    <button
+                      onClick={handleCopy}
+                      className="flex items-center space-x-1 px-3 py-1 rounded text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+                    >
+                      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      <span>{copied ? 'Copied!' : 'Copy'}</span>
+                    </button>
+                  </div>
                   <div className="p-6 overflow-x-auto">
                     <pre className="text-sm text-gray-300">
                       <code dangerouslySetInnerHTML={{ __html: processPostContent(post.code) }} />

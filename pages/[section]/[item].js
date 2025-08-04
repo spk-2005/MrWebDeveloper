@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { usePostsContext } from '../components/PostContext';
-import { useTheme } from '../components/ThemeContext';
 import Navbar from '../components/Navbar';
 import Navbar2 from '../components/Navbar2';
 import Sidenavbar from '../components/Sidenavbar';
@@ -37,14 +36,16 @@ const useOnlineStatus = () => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
-    setIsOnline(navigator.onLine);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    if (typeof window !== 'undefined') {
+      setIsOnline(navigator.onLine);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
 
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
   }, []);
 
   return isOnline;
@@ -73,9 +74,11 @@ const useResponsive = () => {
       });
     };
 
-    updateScreenSize();
-    window.addEventListener('resize', updateScreenSize);
-    return () => window.removeEventListener('resize', updateScreenSize);
+    if (typeof window !== 'undefined') {
+      updateScreenSize();
+      window.addEventListener('resize', updateScreenSize);
+      return () => window.removeEventListener('resize', updateScreenSize);
+    }
   }, []);
 
   return screenSize;
@@ -159,15 +162,19 @@ const useRouting = (section, item, router, getPost) => {
 // Memoized components
 const LoadingScreen = React.memo(() => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center transition-colors duration-300">
       <div className="text-center space-y-6 p-8">
         <div className="relative">
-          <Loader2 className="w-16 h-16 animate-spin mx-auto text-blue-600 dark:text-blue-400" />
-          <div className="absolute inset-0 w-16 h-16 rounded-full mx-auto animate-ping opacity-20 bg-blue-600 dark:bg-blue-400"></div>
+          <Loader2 className="w-16 h-16 text-blue-600 dark:text-blue-400 animate-spin mx-auto" />
+          <div className="absolute inset-0 w-16 h-16 bg-blue-600 dark:bg-blue-400 rounded-full mx-auto animate-ping opacity-20"></div>
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Loading CodeLearn</h2>
-          <p className="text-gray-600 dark:text-gray-400">Preparing your learning experience...</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Loading CodeLearn
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Preparing your learning experience...
+          </p>
         </div>
         <div className="flex justify-center space-x-2">
           {[0, 1, 2].map(i => (
@@ -206,22 +213,20 @@ const ErrorScreen = React.memo(({ error, router }) => {
   ], [router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-white dark:bg-gray-900 transition-colors duration-300">
-      <div className="text-center backdrop-blur-sm p-8 lg:p-12 rounded-3xl shadow-2xl max-w-2xl 
-                      border border-gray-200 dark:border-gray-700 
-                      bg-white/95 dark:bg-gray-800/95">
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center p-4 transition-colors duration-300">
+      <div className="text-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm p-8 lg:p-12 rounded-3xl shadow-2xl max-w-2xl border border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="relative mb-8">
-          <AlertTriangle className="w-20 h-20 mx-auto text-red-500 dark:text-red-400" />
-          <div className="absolute inset-0 w-20 h-20 rounded-full mx-auto animate-ping opacity-20 bg-red-500 dark:bg-red-400"></div>
+          <AlertTriangle className="w-20 h-20 text-red-500 dark:text-red-400 mx-auto" />
+          <div className="absolute inset-0 w-20 h-20 bg-red-500 dark:bg-red-400 rounded-full mx-auto animate-ping opacity-20"></div>
         </div>
         
-        <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
+        <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
           {error.title}
         </h2>
-        <p className="mb-4 text-lg leading-relaxed text-gray-600 dark:text-gray-400">
+        <p className="text-gray-600 dark:text-gray-400 mb-4 text-lg leading-relaxed">
           {error.message}
         </p>
-        <p className="mb-8 text-sm text-gray-500 dark:text-gray-500">
+        <p className="text-gray-500 dark:text-gray-500 mb-8 text-sm">
           {error.suggestion}
         </p>
         
@@ -231,13 +236,13 @@ const ErrorScreen = React.memo(({ error, router }) => {
               key={label}
               onClick={action}
               className={`group flex items-center justify-center space-x-2 px-6 py-4 rounded-xl font-semibold 
-                         transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105
-                         ${variant === 'primary' 
-                           ? 'bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-600'
-                           : variant === 'secondary'
-                           ? 'bg-green-600 dark:bg-green-700 text-white hover:bg-green-700 dark:hover:bg-green-600'
-                           : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                         }`}
+                        transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105
+                        ${variant === 'primary' 
+                          ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white'
+                          : variant === 'secondary'
+                          ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white'
+                          : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                        }`}
             >
               <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
               <span>{label}</span>
@@ -249,49 +254,26 @@ const ErrorScreen = React.memo(({ error, router }) => {
   );
 });
 
-const MobileSidebarToggle = React.memo(({ isSidebarOpen, toggleSidebar, isOnline }) => (
-  <div className="md:hidden fixed top-20 left-4 z-50 flex items-center space-x-2">
+const SidebarToggle = React.memo(({ isSidebarOpen, toggleSidebar }) => {
+  return (
     <button
       onClick={toggleSidebar}
-      className={`backdrop-blur-sm p-3 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl
-                 border border-gray-200 dark:border-gray-600
-                 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300
-                 ${isSidebarOpen ? 'shadow-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}`}
+      className={`fixed top-94 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-3 rounded-r-xl shadow-lg 
+                  transition-all duration-300 hover:shadow-xl border border-l-0 border-gray-200 dark:border-gray-600 
+                  text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 
+                  ${isSidebarOpen ? 'left-72 xl:left-80' : 'left-0'}
+                  md:block`} // This shows on desktop
       aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
     >
-      {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
     </button>
-    
-    {!isOnline && (
-      <div className="backdrop-blur-sm p-3 rounded-xl shadow-lg
-                     border border-orange-200 dark:border-orange-700
-                     bg-orange-50/90 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
-        <WifiOff className="w-5 h-5" />
-      </div>
-    )}
-  </div>
-));
-
-const DesktopSidebarToggle = React.memo(({ isSidebarOpen, toggleSidebar }) => (
-  <button
-    onClick={toggleSidebar}
-    className={`hidden md:block fixed top-32 z-40 backdrop-blur-sm p-3 rounded-r-xl shadow-lg 
-               transition-all duration-300 hover:shadow-xl
-               border border-gray-200 dark:border-gray-600 border-l-0
-               bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300
-               hover:bg-gray-50 dark:hover:bg-gray-700
-               ${isSidebarOpen ? 'left-72 xl:left-80' : 'left-0'}`}
-    aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-  >
-    {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-  </button>
-));
+  );
+});
 
 export default function ItemPage() {
   const router = useRouter();
   const { section, item } = router.query;
   const { getPost, isInitialLoading } = usePostsContext();
-  const { theme } = useTheme();
   
   // Custom hooks
   const isOnline = useOnlineStatus();
@@ -300,11 +282,9 @@ export default function ItemPage() {
   
   // Local state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   // Effects
   useEffect(() => {
-    setMounted(true);
     // Always show sidebar on desktop by default
     if (isDesktop) {
       setIsSidebarOpen(true);
@@ -352,7 +332,7 @@ export default function ItemPage() {
   }), [activeItem, activeSection]);
 
   // Loading screen
-  if (!mounted || isInitialLoading || isProcessing) {
+  if (isInitialLoading || isProcessing) {
     return <LoadingScreen />;
   }
 
@@ -367,7 +347,7 @@ export default function ItemPage() {
         <title>{seoData.title}</title>
         <meta name="description" content={seoData.description} />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta name="theme-color" content={theme === 'dark' ? '#1f2937' : '#ffffff'} />
+        <meta name="theme-color" content="#ffffff" />
         
         <meta property="og:title" content={seoData.title} />
         <meta property="og:description" content={seoData.description} />
@@ -384,20 +364,18 @@ export default function ItemPage() {
         />
       </Head>
       
-      <div className="min-h-screen flex flex-col transition-colors duration-300 bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-300">
         
         {/* Offline notification */}
         {!isOnline && (
-          <div className="bg-orange-100 dark:bg-orange-900/30 border-l-4 border-orange-500 dark:border-orange-400 
-                          text-center py-2 px-4 text-sm font-medium flex items-center justify-center space-x-2 
-                          text-orange-800 dark:text-orange-200">
+          <div className="bg-orange-100 dark:bg-orange-900/30 border-l-4 border-orange-500 dark:border-orange-400 text-orange-800 dark:text-orange-200 text-center py-2 px-4 text-sm font-medium flex items-center justify-center space-x-2 transition-colors duration-300">
             <WifiOff className="w-4 h-4" />
             <span>You&apos;re offline. Some features may not work properly.</span>
           </div>
         )}
 
         {/* Navigation */}
-        <div className=" sticky top-0 z-50">
+        <div className="sticky top-0 z-50">
           <Navbar />
           <Navbar2
             activeSection={activeSection}
@@ -406,18 +384,10 @@ export default function ItemPage() {
           />
         </div>
 
-        {/* Mobile Sidebar Toggle */}
-        <MobileSidebarToggle
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={toggleSidebar}
-          isOnline={isOnline}
-        />
-
-        {/* Desktop Sidebar Toggle */}
-        <DesktopSidebarToggle
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={toggleSidebar}
-        />
+<SidebarToggle
+  isSidebarOpen={isSidebarOpen}
+  toggleSidebar={toggleSidebar}
+/>
 
         {/* Main Layout - Sidebar and Content Side by Side */}
         <div className="flex flex-1 relative">
@@ -448,14 +418,6 @@ export default function ItemPage() {
           </div>
         </div>
 
-        {/* Mobile backdrop for sidebar */}
-        {isMobile && isSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 dark:bg-black/70 z-20 backdrop-blur-sm"
-            onClick={closeSidebar}
-            aria-hidden="true"
-          />
-        )}
 
         {/* Footer */}
         <Footer />

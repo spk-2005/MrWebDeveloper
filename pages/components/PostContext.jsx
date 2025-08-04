@@ -29,7 +29,16 @@ export const PostsProvider = ({ children }) => {
         }
         
         const data = await response.json();
-        setAllPosts(data.posts || []);
+        
+        // Ensure each post has a proper ID
+        const postsWithIds = (data.posts || []).map(post => ({
+          ...post,
+          // Use the existing id field, or fall back to _id, or create a unique ID
+          id: post.id || post._id || `${post.language}-${post.heading}`.replace(/\s+/g, '-').toLowerCase()
+        }));
+        
+        setAllPosts(postsWithIds);
+        console.log('Loaded posts:', postsWithIds); // Debug log
         
       } catch (err) {
         console.error('Error fetching all posts:', err);
@@ -44,10 +53,19 @@ export const PostsProvider = ({ children }) => {
 
   // Helper function to get a specific post
   const getPost = (language, heading) => {
-    return allPosts.find(post => 
-      post.language?.toLowerCase() === language?.toLowerCase() && 
+    const post = allPosts.find(post => 
+      post.language?.toLowerCase() === language?.toLowerCase() &&
       post.heading?.toLowerCase() === heading?.toLowerCase()
     );
+    
+    if (post) {
+      console.log('Found post:', post); // Debug log
+      return post;
+    }
+    
+    console.log('Post not found for:', { language, heading }); // Debug log
+    console.log('Available posts:', allPosts.map(p => ({ language: p.language, heading: p.heading, id: p.id }))); // Debug log
+    return null;
   };
 
   // Helper function to get posts by language
@@ -57,12 +75,24 @@ export const PostsProvider = ({ children }) => {
     );
   };
 
+  // Helper function to update a post's likes locally (for optimistic updates)
+  const updatePostLikes = (postId, newLikesCount) => {
+    setAllPosts(prevPosts => 
+      prevPosts.map(post => 
+        post.id === postId 
+          ? { ...post, likes: newLikesCount }
+          : post
+      )
+    );
+  };
+
   const value = {
     allPosts,
     isInitialLoading,
     error,
     getPost,
-    getPostsByLanguage
+    getPostsByLanguage,
+    updatePostLikes
   };
 
   return (
@@ -76,11 +106,11 @@ export const PostsProvider = ({ children }) => {
 // This creates a dummy page that users shouldn't access directly
 const PostContextPage = () => {
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
       minHeight: '100vh',
       padding: '20px',
       textAlign: 'center'
