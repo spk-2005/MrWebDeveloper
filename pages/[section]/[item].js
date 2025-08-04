@@ -189,6 +189,7 @@ const LoadingScreen = React.memo(() => {
     </div>
   );
 });
+LoadingScreen.displayName = 'LoadingScreen';
 
 const ErrorScreen = React.memo(({ error, router }) => {
   const errorActions = useMemo(() => [
@@ -253,7 +254,7 @@ const ErrorScreen = React.memo(({ error, router }) => {
     </div>
   );
 });
-
+ErrorScreen.displayName = 'ErrorScreen';
 const SidebarToggle = React.memo(({ isSidebarOpen, toggleSidebar }) => {
   return (
     <button
@@ -270,6 +271,7 @@ const SidebarToggle = React.memo(({ isSidebarOpen, toggleSidebar }) => {
   );
 });
 
+SidebarToggle.displayName = 'SidebarToggle';
 export default function ItemPage() {
   const router = useRouter();
   const { section, item } = router.query;
