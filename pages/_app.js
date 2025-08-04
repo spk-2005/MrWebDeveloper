@@ -3,8 +3,6 @@ import '../styles/globals.css';
 import { PostsProvider } from './components/PostContext';
 import AppLoadingScreen from './components/AppLoadingScreen';
 import { useEffect } from 'react';
-import Head from 'next/head';
-
 function MyApp({ Component, pageProps }) {
   // Apply initial theme-related styles to prevent flash
   useEffect(() => {
@@ -22,11 +20,6 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <>
-    <Head>
-      
-        <meta name="google-adsense-account" content="ca-pub-4966899358935665"></meta>
-      <meta name="google-site-verification" content="MoeiZ7kQur1i2YnchsT8JJCrNgmmGYqlvcIIXT_CCAE" />
-    </Head>
       <PostsProvider>
         <AppLoadingScreen>
           {/* Theme toggle should be available globally */}
