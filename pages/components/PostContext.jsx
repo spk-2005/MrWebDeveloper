@@ -5,9 +5,9 @@ const PostsContext = createContext();
 // Cache configuration
 const CACHE_KEY = 'codelearn_posts_cache';
 const CACHE_VERSION = '1.0';
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const CACHE_DURATION = 10 * 60 * 1000; 
 
-// Optimized storage utilities
+// Optimized storage utilities with better error handling
 const storage = {
   get: (key) => {
     try {
@@ -31,6 +31,11 @@ const storage = {
       return parsed.data;
     } catch (error) {
       console.warn('Cache read error:', error);
+      try {
+        localStorage.removeItem(key);
+      } catch (cleanupError) {
+        console.warn('Cache cleanup error:', cleanupError);
+      }
       return null;
     }
   },
@@ -49,6 +54,15 @@ const storage = {
       localStorage.setItem(key, JSON.stringify(item));
     } catch (error) {
       console.warn('Cache write error:', error);
+      // If storage is full, try to clear some space
+      if (error.name === 'QuotaExceededError') {
+        try {
+          localStorage.clear();
+          console.log('Cleared localStorage due to quota exceeded');
+        } catch (clearError) {
+          console.warn('Failed to clear localStorage:', clearError);
+        }
+      }
     }
   }
 };
@@ -66,13 +80,16 @@ export const PostsProvider = ({ children }) => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Create a memoized lookup map for O(1) post retrieval
   const postLookupMap = useMemo(() => {
     const map = new Map();
     allPosts.forEach(post => {
-      const key = `${post.language?.toLowerCase()}-${post.heading?.toLowerCase()}`;
-      map.set(key, post);
+      if (post.language && post.heading) {
+        const key = `${post.language.toLowerCase()}-${post.heading.toLowerCase()}`;
+        map.set(key, post);
+      }
     });
     return map;
   }, [allPosts]);
@@ -90,7 +107,7 @@ export const PostsProvider = ({ children }) => {
     return grouped;
   }, [allPosts]);
 
-  // Optimized fetch function with retry logic
+  // Optimized fetch function with retry logic and better error handling
   const fetchPosts = useCallback(async (forceRefresh = false) => {
     try {
       setError(null);
@@ -98,12 +115,13 @@ export const PostsProvider = ({ children }) => {
       // Check cache first (unless force refresh)
       if (!forceRefresh) {
         const cached = storage.get(CACHE_KEY);
-        if (cached && cached.posts && Array.isArray(cached.posts)) {
+        if (cached && cached.posts && Array.isArray(cached.posts) && cached.posts.length > 0) {
           console.log('📦 Loading posts from cache');
           setAllPosts(cached.posts);
           setLastFetched(cached.timestamp);
           setIsInitialLoading(false);
-          return;
+          setRetryCount(0);
+          return cached.posts;
         }
       }
 
@@ -114,37 +132,88 @@ export const PostsProvider = ({ children }) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
-      const response = await fetch('/api/posts/all', {
-        signal: controller.signal,
-        headers: {
-          'Cache-Control': 'max-age=300', // 5 minutes browser cache
-          'Accept': 'application/json',
+      let response;
+      try {
+        response = await fetch('/api/posts/all', {
+          signal: controller.signal,
+          headers: {
+            'Cache-Control': 'max-age=300', // 5 minutes browser cache
+            'Accept': 'application/json',
+          }
+        });
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timed out. Please check your connection and try again.');
         }
-      });
+        throw new Error(`Network error: ${fetchError.message}`);
+      }
       
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to fetch posts`);
+        let errorMessage = `HTTP ${response.status}: `;
+        try {
+          const errorData = await response.json();
+          errorMessage += errorData.message || 'Failed to fetch posts';
+          console.error('API Error Details:', errorData);
+        } catch (parseError) {
+          errorMessage += `Failed to fetch posts (${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
       
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        throw new Error('Invalid response format from server');
+      }
+      
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response data format');
+      }
       
       if (!data.success) {
         throw new Error(data.message || 'API returned unsuccessful response');
       }
       
-      // Process posts with better ID generation
-      const postsWithIds = (data.posts || []).map(post => ({
-        ...post,
-        id: post.id || post._id || `${post.language}-${post.heading}`.replace(/\s+/g, '-').toLowerCase(),
-        // Add computed fields for better performance
-        searchKey: `${post.language} ${post.heading}`.toLowerCase(),
-        slug: post.heading?.replace(/\s+/g, '-').toLowerCase()
-      }));
+      // Validate posts data
+      const posts = data.posts;
+      if (!Array.isArray(posts)) {
+        console.warn('Posts data is not an array:', typeof posts);
+        throw new Error('Invalid posts data format from server');
+      }
+      
+      // Process posts with better ID generation and validation
+      const postsWithIds = posts.map((post, index) => {
+        try {
+          return {
+            ...post,
+            id: post.id || post._id || `post-${index}-${Date.now()}`,
+            // Add computed fields for better performance
+            searchKey: `${post.language || ''} ${post.heading || ''}`.toLowerCase(),
+            slug: post.slug || (post.heading ? post.heading.replace(/\s+/g, '-').toLowerCase() : `post-${index}`)
+          };
+        } catch (processError) {
+          console.warn('Error processing post at index', index, processError);
+          return {
+            id: `error-post-${index}`,
+            language: 'UNKNOWN',
+            heading: 'Error loading post',
+            code: '// Error loading this post',
+            likes: 0,
+            views: 0,
+            images: [],
+            searchKey: 'error post',
+            slug: `error-post-${index}`
+          };
+        }
+      }).filter(post => post && post.id); // Filter out any null/undefined posts
       
       setAllPosts(postsWithIds);
       setLastFetched(Date.now());
+      setRetryCount(0);
       
       // Cache the processed data
       storage.set(CACHE_KEY, {
@@ -153,35 +222,51 @@ export const PostsProvider = ({ children }) => {
       });
       
       console.log(`✅ Loaded ${postsWithIds.length} posts successfully`);
+      return postsWithIds;
       
     } catch (err) {
-      if (err.name === 'AbortError') {
-        setError('Request timed out. Please check your connection.');
-      } else {
-        setError(err.message);
-      }
       console.error('❌ Error fetching posts:', err);
+      setError(err.message);
       
       // Try to use cached data as fallback
       const cached = storage.get(CACHE_KEY);
-      if (cached && cached.posts) {
-        console.log('📦 Using cached data as fallback');
+      if (cached && cached.posts && Array.isArray(cached.posts) && cached.posts.length > 0) {
+        console.log('📦 Using cached data as fallback due to error');
         setAllPosts(cached.posts);
         setLastFetched(cached.timestamp);
+        setError(`${err.message} (showing cached data)`);
+        return cached.posts;
       }
+      
+      // If no cache available and this is a retryable error, set up retry
+      if (retryCount < 3 && !err.message.includes('timed out')) {
+        console.log(`🔄 Scheduling retry ${retryCount + 1}/3 in ${(retryCount + 1) * 2} seconds`);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          fetchPosts(forceRefresh);
+        }, (retryCount + 1) * 2000);
+      }
+      
+      throw err;
     } finally {
       setIsInitialLoading(false);
     }
-  }, []);
+  }, [retryCount]);
 
   // Initialize data loading
   useEffect(() => {
-    fetchPosts();
+    fetchPosts().catch(err => {
+      console.error('Initial fetch failed:', err);
+      // Error is already handled in fetchPosts
+    });
   }, [fetchPosts]);
 
   // Optimized getPost function using Map lookup
   const getPost = useCallback((language, heading) => {
-    if (!language || !heading) return null;
+    if (!language || !heading) {
+      console.warn('getPost called with missing parameters:', { language, heading });
+      return null;
+    }
     
     const key = `${language.toLowerCase()}-${heading.toLowerCase()}`;
     const post = postLookupMap.get(key);
@@ -197,16 +282,24 @@ export const PostsProvider = ({ children }) => {
 
   // Optimized getPostsByLanguage function
   const getPostsByLanguage = useCallback((language) => {
-    if (!language) return [];
+    if (!language) {
+      console.warn('getPostsByLanguage called with empty language');
+      return [];
+    }
     return postsByLanguage[language.toLowerCase()] || [];
   }, [postsByLanguage]);
 
   // Update post likes with optimistic updates
   const updatePostLikes = useCallback((postId, newLikesCount) => {
+    if (!postId || typeof newLikesCount !== 'number') {
+      console.warn('Invalid parameters for updatePostLikes:', { postId, newLikesCount });
+      return;
+    }
+    
     setAllPosts(prevPosts => 
       prevPosts.map(post => 
         post.id === postId 
-          ? { ...post, likes: newLikesCount }
+          ? { ...post, likes: Math.max(0, newLikesCount) }
           : post
       )
     );
@@ -214,6 +307,7 @@ export const PostsProvider = ({ children }) => {
 
   // Refresh function
   const refreshPosts = useCallback(() => {
+    setRetryCount(0);
     return fetchPosts(true);
   }, [fetchPosts]);
 
@@ -221,21 +315,35 @@ export const PostsProvider = ({ children }) => {
   const clearCache = useCallback(() => {
     try {
       localStorage.removeItem(CACHE_KEY);
-      return fetchPosts(true);
+      console.log('Cache cleared successfully');
     } catch (error) {
       console.warn('Failed to clear cache:', error);
-      return fetchPosts(true);
     }
+    setRetryCount(0);
+    return fetchPosts(true);
   }, [fetchPosts]);
 
   // Search posts function
   const searchPosts = useCallback((query) => {
-    if (!query) return [];
-    const lowerQuery = query.toLowerCase();
-    return allPosts.filter(post => 
-      post.searchKey?.includes(lowerQuery) ||
-      post.code?.toLowerCase().includes(lowerQuery)
-    );
+    if (!query || typeof query !== 'string') {
+      console.warn('Invalid search query:', query);
+      return [];
+    }
+    
+    const lowerQuery = query.toLowerCase().trim();
+    if (lowerQuery.length === 0) return [];
+    
+    return allPosts.filter(post => {
+      try {
+        return post.searchKey?.includes(lowerQuery) ||
+               post.code?.toLowerCase().includes(lowerQuery) ||
+               post.description?.toLowerCase().includes(lowerQuery) ||
+               post.tags?.some(tag => tag.toLowerCase().includes(lowerQuery));
+      } catch (filterError) {
+        console.warn('Error filtering post in search:', filterError);
+        return false;
+      }
+    });
   }, [allPosts]);
 
   // Memoized context value to prevent unnecessary re-renders
@@ -244,6 +352,7 @@ export const PostsProvider = ({ children }) => {
     isInitialLoading,
     error,
     lastFetched,
+    retryCount,
     getPost,
     getPostsByLanguage,
     updatePostLikes,
@@ -253,12 +362,15 @@ export const PostsProvider = ({ children }) => {
     // Additional computed values
     totalPosts: allPosts.length,
     availableLanguages: Object.keys(postsByLanguage),
-    postsByLanguage
+    postsByLanguage,
+    // Health status
+    isHealthy: !error && allPosts.length > 0
   }), [
     allPosts,
     isInitialLoading,
     error,
     lastFetched,
+    retryCount,
     getPost,
     getPostsByLanguage,
     updatePostLikes,
@@ -294,6 +406,32 @@ export const useLanguagePosts = (language) => {
     isLoading: isInitialLoading,
     error
   }), [getPostsByLanguage, language, isInitialLoading, error]);
+};
+
+// Error boundary hook for better error handling
+export const usePostsError = () => {
+  const { error, refreshPosts, clearCache, retryCount } = usePostsContext();
+  
+  const retry = useCallback(() => {
+    refreshPosts().catch(err => {
+      console.error('Manual retry failed:', err);
+    });
+  }, [refreshPosts]);
+  
+  const resetCache = useCallback(() => {
+    clearCache().catch(err => {
+      console.error('Cache reset failed:', err);
+    });
+  }, [clearCache]);
+  
+  return {
+    error,
+    hasError: !!error,
+    retry,
+    resetCache,
+    retryCount,
+    canRetry: retryCount < 3
+  };
 };
 
 // Default export (keep your existing page component)

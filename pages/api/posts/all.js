@@ -1,51 +1,15 @@
 // pages/api/posts/all.js - Ultra-optimized version
 import mongoose from 'mongoose';
-import Post from '@/src/app/lib/models/post';
+import Post from '@/pages/api/lib/models/post';
+import connectMongo from '@/pages/api/lib/mongodb';
 
 // Advanced caching with multiple layers
 const memoryCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_ENTRIES = 20;
 
-// Connection pooling optimization
-let cachedConnection = null;
 
-const connectDB = async () => {
-  if (cachedConnection && mongoose.connections[0].readyState === 1) {
-    return cachedConnection;
-  }
-  
-  try {
-    const opts = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      // Connection pooling settings
-      maxPoolSize: 10,
-      minPoolSize: 2,
-      maxIdleTimeMS: 30000,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      // Performance optimizations
-      bufferCommands: false,
-      bufferMaxEntries: 0,
-      // Read preference for better performance
-      readPreference: 'secondaryPreferred',
-      // Write concern for faster writes
-      writeConcern: {
-        w: 1,
-        j: false
-      }
-    };
 
-    cachedConnection = await mongoose.connect(process.env.MONGODB_URI, opts);
-    console.log('✅ MongoDB connected with optimization');
-    return cachedConnection;
-  } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
-    cachedConnection = null;
-    throw error;
-  }
-};
 
 // Enhanced cache management
 const cacheManager = {
@@ -175,7 +139,7 @@ export default async function handler(req, res) {
     }
 
     // Connect to database
-    await connectDB();
+    await connectMongo();
     
     let posts;
     
