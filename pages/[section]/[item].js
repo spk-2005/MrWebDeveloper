@@ -315,7 +315,7 @@ export default function ItemPage() {
   const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
 
   const seoData = useMemo(() => ({
-    title: activeItem ? `${activeItem} - ${activeSection} Tutorial | CodeLearn` : 'CodeLearn - Web Development Tutorials',
+    title: activeItem ? `${activeItem} - ${activeSection} Tutorial | MrDeveloper` : 'MrDeveloper - Web Development Tutorials',
     description: activeItem 
       ? `Learn ${activeItem} in ${activeSection} with detailed examples, practical exercises, and step-by-step explanations.`
       : 'Master web development with comprehensive tutorials covering HTML, CSS, JavaScript, and Tailwind CSS.',

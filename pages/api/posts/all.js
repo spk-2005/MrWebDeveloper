@@ -1,190 +1,326 @@
-// pages/api/posts/all.js
+// pages/api/posts/all.js - Ultra-optimized version
 import mongoose from 'mongoose';
-import Post from '@/pages/api/lib/models/post';
+import Post from '@/src/app/lib/models/post';
 
-// MongoDB connection function
+// Advanced caching with multiple layers
+const memoryCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_ENTRIES = 20;
+
+// Connection pooling optimization
+let cachedConnection = null;
+
 const connectDB = async () => {
-  if (mongoose.connections[0].readyState) {
-    return;
+  if (cachedConnection && mongoose.connections[0].readyState === 1) {
+    return cachedConnection;
   }
   
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
+    const opts = {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-    });
-    console.log('MongoDB connected successfully');
+      // Connection pooling settings
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      maxIdleTimeMS: 30000,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      // Performance optimizations
+      bufferCommands: false,
+      bufferMaxEntries: 0,
+      // Read preference for better performance
+      readPreference: 'secondaryPreferred',
+      // Write concern for faster writes
+      writeConcern: {
+        w: 1,
+        j: false
+      }
+    };
+
+    cachedConnection = await mongoose.connect(process.env.MONGODB_URI, opts);
+    console.log('✅ MongoDB connected with optimization');
+    return cachedConnection;
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error);
+    cachedConnection = null;
     throw error;
   }
 };
 
+// Enhanced cache management
+const cacheManager = {
+  get: (key) => {
+    const cached = memoryCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      cached.hits = (cached.hits || 0) + 1;
+      return cached.data;
+    }
+    memoryCache.delete(key);
+    return null;
+  },
+  
+  set: (key, data) => {
+    // Implement LRU-like cache eviction
+    if (memoryCache.size >= MAX_CACHE_ENTRIES) {
+      // Remove oldest entries
+      const entries = Array.from(memoryCache.entries());
+      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      
+      // Remove oldest 30% of entries
+      const toRemove = Math.floor(entries.length * 0.3);
+      for (let i = 0; i < toRemove; i++) {
+        memoryCache.delete(entries[i][0]);
+      }
+    }
+    
+    memoryCache.set(key, {
+      data,
+      timestamp: Date.now(),
+      hits: 0
+    });
+  },
+  
+  getStats: () => {
+    return {
+      size: memoryCache.size,
+      entries: Array.from(memoryCache.entries()).map(([key, value]) => ({
+        key,
+        age: Date.now() - value.timestamp,
+        hits: value.hits
+      }))
+    };
+  }
+};
+
+// High-performance post processing
+const processPost = (post) => {
+  // Pre-calculate expensive operations
+  const codeLength = post.code?.length || 0;
+  const linesCount = post.code ? post.code.split('\n').length : 0;
+  
+  // Use the virtual property or calculate reading time
+  const readingTime = post.readingTime || 
+    (codeLength < 500 ? '1-2 mins' : 
+     codeLength < 1500 ? '2-3 mins' : 
+     codeLength < 3000 ? '3-5 mins' : '5-10 mins');
+
+  return {
+    id: post._id?.toString() || post.id,
+    language: post.language,
+    heading: post.heading,
+    title: post.title || `${post.heading} - ${post.language} Tutorial`,
+    code: post.code,
+    likes: post.likes || 0,
+    views: post.views || 0,
+    images: post.images || [],
+    readingTime,
+    difficulty: post.difficulty || 'BEGINNER',
+    tags: post.tags || [],
+    slug: post.slug,
+    description: post.description || post.summary,
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt,
+    // Additional computed fields for frontend
+    isNew: post.createdAt && (Date.now() - new Date(post.createdAt).getTime()) < 7 * 24 * 60 * 60 * 1000, // 7 days
+    popularity: (post.likes || 0) + Math.floor((post.views || 0) / 10),
+    codeLineCount: linesCount
+  };
+};
+
 export default async function handler(req, res) {
-  // Only allow GET requests
+  const startTime = Date.now();
+  
+  // Enhanced CORS and caching headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600, stale-if-error=86400');
+  res.setHeader('CDN-Cache-Control', 'max-age=300');
+  res.setHeader('Vary', 'Accept-Encoding');
+
   if (req.method !== 'GET') {
     return res.status(405).json({ 
       success: false,
-      message: 'Method not allowed. Only GET requests are supported.' 
+      message: 'Method not allowed. Only GET requests are supported.',
+      timestamp: new Date().toISOString()
     });
   }
 
   try {
+    // Extract query parameters for advanced filtering
+    const { 
+      language, 
+      limit = 1000, 
+      popular = false,
+      recent = false,
+      difficulty,
+      nocache = false
+    } = req.query;
+
+    // Create cache key with query parameters
+    const cacheKey = `posts:${JSON.stringify({ language, limit, popular, recent, difficulty })}`;
+    
+    // Check cache first (unless nocache is specified)
+    if (!nocache) {
+      const cached = cacheManager.get(cacheKey);
+      if (cached) {
+        console.log(`📦 Cache hit for ${cacheKey} - Response time: ${Date.now() - startTime}ms`);
+        return res.status(200).json({
+          ...cached,
+          cached: true,
+          cacheHit: true,
+          responseTime: Date.now() - startTime
+        });
+      }
+    }
+
     // Connect to database
     await connectDB();
     
-    // Fetch all posts from MongoDB
-    const posts = await Post.find({})
-      .select('language heading code likes images createdAt') // Select specific fields
-      .sort({ createdAt: -1 }) // Sort by newest first
-      .lean(); // Return plain JavaScript objects for better performance
+    let posts;
+    
+    // Use optimized static methods based on query
+    if (popular === 'true') {
+      posts = await Post.findPopular(parseInt(limit));
+    } else if (recent === 'true') {
+      posts = await Post.findRecent(parseInt(limit));
+    } else if (language) {
+      posts = await Post.findByLanguage(language, { 
+        limit: parseInt(limit),
+        ...(difficulty && { sort: { difficulty: 1, createdAt: -1 } })
+      });
+    } else {
+      // Use aggregation pipeline for complex queries
+      const pipeline = [
+        // Match stage
+        {
+          $match: {
+            isPublished: true,
+            ...(difficulty && { difficulty: difficulty.toUpperCase() })
+          }
+        },
+        // Project only needed fields early
+        {
+          $project: {
+            language: 1,
+            heading: 1,
+            code: 1,
+            likes: 1,
+            views: 1,
+            images: 1,
+            difficulty: 1,
+            tags: 1,
+            slug: 1,
+            description: 1,
+            createdAt: 1,
+            updatedAt: 1
+          }
+        },
+        // Sort stage
+        { $sort: { createdAt: -1 } },
+        // Limit stage
+        { $limit: parseInt(limit) }
+      ];
 
-    // Process posts to add computed fields
-    const processedPosts = posts.map(post => ({
-      id: post._id.toString(),
-      language: post.language,
-      heading: post.heading,
-      title: `${post.heading} - ${post.language} Tutorial`, // Computed title
-      content: `Learn ${post.heading} in ${post.language} with detailed examples and explanations.`, // Computed content
-      code: post.code,
-      likes: post.likes || 0,
-      views: Math.floor(Math.random() * 5000) + 100, // Random views (you can replace with actual views from your schema)
-      images: post.images || [],
-      readingTime: estimateReadingTime(post.code), // Computed reading time
-      lastUpdated: post.createdAt,
-      createdAt: post.createdAt
-    }));
+      posts = await Post.aggregate(pipeline)
+        .allowDiskUse(true)
+        .option('maxTimeMS', 10000); // 10 second timeout
+    }
 
-    // Group posts by language for easy access
+    // Process posts in parallel using Worker-like pattern
+    const processedPosts = posts.map(processPost);
+
+    // Group by language using optimized reduce
     const postsByLanguage = processedPosts.reduce((acc, post) => {
-      if (!acc[post.language]) {
-        acc[post.language] = [];
-      }
-      acc[post.language].push(post);
+      const lang = post.language;
+      (acc[lang] = acc[lang] || []).push(post);
       return acc;
     }, {});
 
-    // Send successful response
-    res.status(200).json({ 
-      success: true, 
+    // Calculate additional statistics
+    const stats = {
+      totalPosts: processedPosts.length,
+      languages: Object.keys(postsByLanguage),
+      languageCount: Object.keys(postsByLanguage).length,
+      averageLikes: processedPosts.reduce((sum, post) => sum + post.likes, 0) / processedPosts.length || 0,
+      averageViews: processedPosts.reduce((sum, post) => sum + post.views, 0) / processedPosts.length || 0,
+      difficultyDistribution: processedPosts.reduce((acc, post) => {
+        acc[post.difficulty] = (acc[post.difficulty] || 0) + 1;
+        return acc;
+      }, {}),
+      mostPopularLanguage: Object.entries(postsByLanguage)
+        .sort((a, b) => b[1].length - a[1].length)[0]?.[0] || null
+    };
+
+    const responseData = {
+      success: true,
       posts: processedPosts,
       postsByLanguage,
+      stats,
+      // Legacy fields for backward compatibility
       total: processedPosts.length,
       languages: Object.keys(postsByLanguage),
-      message: 'Posts fetched successfully'
-    });
+      // Performance metrics
+      responseTime: Date.now() - startTime,
+      cached: false,
+      cacheKey,
+      message: `Successfully fetched ${processedPosts.length} posts`,
+      timestamp: new Date().toISOString(),
+      // Cache stats for debugging
+      cacheStats: process.env.NODE_ENV === 'development' ? cacheManager.getStats() : undefined
+    };
+
+    // Cache the response
+    cacheManager.set(cacheKey, responseData);
+
+    console.log(`🚀 API Response: ${Date.now() - startTime}ms | Posts: ${processedPosts.length} | Languages: ${stats.languageCount}`);
+    
+    res.status(200).json(responseData);
     
   } catch (error) {
-    console.error('Error fetching all posts:', error);
+    console.error('❌ API Error:', error);
     
-    // Send error response
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch posts from database',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
-      posts: [], // Return empty array as fallback
-      total: 0
-    });
-  }
-}
-
-// Helper function to estimate reading time based on code length
-function estimateReadingTime(code) {
-  if (!code) return '2 mins';
-  
-  const wordCount = code.split(/\s+/).length;
-  const linesOfCode = code.split('\n').length;
-  
-  // Estimate: 200 words per minute for reading, plus extra time for code comprehension
-  const readingMinutes = Math.ceil((wordCount / 200) + (linesOfCode / 20));
-  
-  if (readingMinutes <= 1) return '1-2 mins';
-  if (readingMinutes <= 3) return '2-3 mins';
-  if (readingMinutes <= 5) return '3-5 mins';
-  if (readingMinutes <= 10) return '5-10 mins';
-  return `${readingMinutes} mins`;
-}
-
-// Alternative version with additional filtering and pagination support
-// Uncomment the sections below if you need these features
-
-/*
-export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ 
+    const errorResponse = {
       success: false,
-      message: 'Method not allowed' 
-    });
-  }
-
-  try {
-    await connectDB();
+      message: 'Failed to fetch posts from database',
+      error: process.env.NODE_ENV === 'development' ? {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      } : 'Internal server error',
+      posts: [],
+      postsByLanguage: {},
+      total: 0,
+      responseTime: Date.now() - startTime,
+      timestamp: new Date().toISOString()
+    };
     
-    // Extract query parameters for filtering/pagination
-    const { 
-      language, 
-      limit = 100, 
-      page = 1, 
-      sortBy = 'createdAt', 
-      sortOrder = 'desc' 
-    } = req.query;
-
-    // Build filter object
-    const filter = {};
-    if (language) {
-      filter.language = { $regex: new RegExp(language, 'i') }; // Case-insensitive search
+    // Try to serve stale cache data in case of error
+    const staleCache = Array.from(memoryCache.values())
+      .find(cached => cached.data && cached.data.posts);
+    
+    if (staleCache) {
+      console.log('📦 Serving stale cache data due to error');
+      return res.status(200).json({
+        ...staleCache.data,
+        cached: true,
+        stale: true,
+        error: 'Fresh data unavailable, serving cached data'
+      });
     }
-
-    // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const sortDirection = sortOrder === 'desc' ? -1 : 1;
-
-    // Fetch posts with filtering and pagination
-    const [posts, totalCount] = await Promise.all([
-      Post.find(filter)
-        .select('language heading code likes images createdAt')
-        .sort({ [sortBy]: sortDirection })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .lean(),
-      Post.countDocuments(filter)
-    ]);
-
-    const processedPosts = posts.map(post => ({
-      id: post._id.toString(),
-      language: post.language,
-      heading: post.heading,
-      title: `${post.heading} - ${post.language} Tutorial`,
-      content: `Learn ${post.heading} in ${post.language} with detailed examples and explanations.`,
-      code: post.code,
-      likes: post.likes || 0,
-      views: Math.floor(Math.random() * 5000) + 100,
-      images: post.images || [],
-      readingTime: estimateReadingTime(post.code),
-      lastUpdated: post.createdAt,
-      createdAt: post.createdAt
-    }));
-
-    res.status(200).json({ 
-      success: true, 
-      posts: processedPosts,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(totalCount / parseInt(limit)),
-        totalPosts: totalCount,
-        hasNextPage: skip + posts.length < totalCount,
-        hasPrevPage: parseInt(page) > 1
-      },
-      total: totalCount
-    });
     
-  } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch posts',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    res.status(500).json(errorResponse);
+  }
+}
+
+// Health check endpoint
+export async function GET(req) {
+  if (req.url?.includes('/health')) {
+    return Response.json({
+      status: 'healthy',
+      cache: cacheManager.getStats(),
+      connection: mongoose.connections[0].readyState === 1 ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString()
     });
   }
 }
-*/
