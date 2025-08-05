@@ -5,7 +5,7 @@ const PostsContext = createContext();
 // Cache configuration
 const CACHE_KEY = 'codelearn_posts_cache';
 const CACHE_VERSION = '1.0';
-const CACHE_DURATION = 10 * 60 * 1000; 
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 // Optimized storage utilities with better error handling
 const storage = {
