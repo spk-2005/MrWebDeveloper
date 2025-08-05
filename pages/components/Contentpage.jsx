@@ -16,6 +16,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 // New ShareModal component
 const ShareModal = ({ title, text, url, onClose }) => {
@@ -308,7 +309,7 @@ export default function Contentpage({
       setBookmarked(userBookmarks[post.id] || false);
     }
   }, [post]);
-
+const router=useRouter();
   if (!mounted) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -362,7 +363,7 @@ export default function Contentpage({
 
   if (!post) {
     return (
-      <div className="flex items-center justify-center h-96 p-4">
+      <div className="flex items-center bg-gray-300 justify-center h-96 p-4">
         <div className="text-center max-w-2xl mx-auto">
           <BookOpen className="w-20 h-20 mx-auto mb-6 text-blue-500 dark:text-blue-400" />
           <h1 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -381,7 +382,7 @@ export default function Contentpage({
   }
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full bg-gray-250 ">
       {showShareModal && (
         <ShareModal
           title={`${activeItem} - ${activeSection} Tutorial`}
@@ -392,76 +393,70 @@ export default function Contentpage({
       )}
       <div className="">
         {/* Breadcrumb & Actions */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between ">
-          <nav className="flex items-center text-sm text-gray-900">
+        <div style={{backgroundColor:"#2d5571ff"}} className="flex p-3 flex-col lg:flex-row lg:items-center lg:justify-between ">
+          <nav className="flex items-center text-sm text-white">
             <button 
-              onClick={() => handleSetActiveSection(null)} 
-              className="hover:underline transition-colors hover:text-gray-900 dark:hover:text-gray-200"
+              onClick={() =>router.push("/")} 
+              className="hover:underline transition-colors"
             >
               Home
             </button>
             <ChevronRight className="w-4 h-4 mx-2" />
             <button 
               onClick={() => handleSetActiveItem(null)} 
-              className="hover:underline transition-colors hover:text-gray-900 dark:hover:text-gray-200"
+              className="hover:underline transition-colors hover:text-gray-200"
             >
               {activeSection}
             </button>
             <ChevronRight className="w-4 h-4 mx-2" />
-            <span className="font-medium text-gray-900 dark:text-white">{activeItem}</span>
+            <span className="font-medium text-white  hover:text-gray-200">{activeItem}</span>
           
-          <div className="flex flex-wrap gap-4 ">
-            <span>Updated: {formatDate(post.lastUpdated)}</span>
-          </div>
           </nav>
           
-          <div className="flex items-center space-x-2">
-            <button 
-              onClick={handleLike}
-              disabled={isLiking}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all text-sm border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
-                ${liked 
-                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300' 
-                  : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-            >
-              {isLiking ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Heart className={`w-4 h-4 ${liked ? 'fill-current text-red-500' : ''}`} />
-              )}
-              <span>{likeCount}</span>
-            </button>
-            
-            
-            <button 
-              onClick={handleShare}
-              className="p-2 rounded-lg transition-all border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-          </div>
         </div>
 
-        {/* Title & Meta Info */}
-        <div className="mb-2">
-          <h1 className="  lg:text-5xl font-bold mb-4 ">
-            {activeItem}
-            
-          </h1>
-        </div>
 
         {/* Main Content */}
+        <div className='flex justify-between'>
+        <div className="flex items-center space-x-2">
+  <button
+    onClick={handleLike}
+    disabled={isLiking}
+    className={`flex items-center space-x-2 px-4 py-2 transition-all text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
+      ${liked
+        ? 'text-red-700'
+        : 'text-gray-700'
+      }`}
+  >
+    {isLiking ? (
+      <Loader2 className="w-4 h-4 animate-spin" />
+    ) : (
+      <Heart className={`w-4 h-4 ${liked ? 'fill-current text-red-500' : ''}`} />
+    )}
+    <span>{likeCount}</span>
+  </button>
+
+  <button
+    onClick={handleShare}
+    className="p-2 transition-all text-gray-700"
+  >
+    <Share2 className="w-4 h-4" />
+  </button>
+  
+</div><div className="flex flex-wrap p-2 ">
+            <span>Updated: {formatDate(post.lastUpdated)}</span>
+          </div>
+          </div>
         <div className="w-full">
-          <article className="rounded-lg bg-gray-800  mb-3 ">
-            <div className="prose prose-lg max-w-none dark:prose-invert">
+          <article className="rounded-lg   mb-3 ">
+            <div className="prose prose-lg max-w-none ">
               
               {/* Code Example Section */}
               {post.code ? (
                 <div className="rounded-lg  overflow-hidden mb-2 relative">
                   
                   <div className="p-4 overflow-x-auto">
-                    <pre className="text-sm text-gray-300">
+                    <pre className="text-sm text--black">
                       <code dangerouslySetInnerHTML={{ __html: processPostContent(post.code) }} />
                     </pre>
                   </div>
@@ -494,6 +489,7 @@ export default function Contentpage({
               </button>
             </div>
           </div>
+          
 
           {/* Navigation Footer */}
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm">

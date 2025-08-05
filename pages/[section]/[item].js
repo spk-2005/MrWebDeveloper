@@ -398,7 +398,7 @@ export default function ItemPage() {
 
           {/* Main Content Area - Full width when sidebar closed */}
           <div className="flex-1 min-w-0 overflow-auto">
-            <main className="p-4">
+            <main className="">
               <Contentpage
                 key={`${activeSection}-${activeItem}`}
                 activeSection={activeSection}
