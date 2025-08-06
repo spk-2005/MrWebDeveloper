@@ -9,7 +9,7 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false);
 
   const navlists = ['Home', 'How To Learn', 'Practice Field'];
-  const navLinks = ['/', '/Howtolearn', '/Practicefield'];
+  const navLinks = ['/', '/howtolearn', '/Practicefield'];
 
   useEffect(() => {
     setMounted(true);
