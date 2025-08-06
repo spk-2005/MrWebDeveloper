@@ -628,25 +628,25 @@ function HomeContent() {
 export default function Home() {
   return (
      <> <Head>
-        <title>CodeLearn - Master Web Development | HTML, CSS, JavaScript, Tailwind CSS</title>
-        <meta name="description" content="Learn web development from scratch with CodeLearn. Complete tutorials covering HTML, CSS, JavaScript, and Tailwind CSS. Interactive examples, structured learning path, and hands-on projects." />
+        <title>MrDeveloper - Master Web Development | HTML, CSS, JavaScript, Python , C and more technologies</title>
+        <meta name="description" content="Learn web development from scratch with MrDeveloper. Complete tutorials covering HTML, CSS, JavaScript, Python , C and more technologies. Interactive examples, structured learning path, and hands-on projects." />
         <meta name="keywords" content="web development, HTML tutorial, CSS tutorial, JavaScript tutorial, Tailwind CSS, programming tutorials, learn coding, frontend development" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://codelearn.dev/" />
-        <meta property="og:title" content="CodeLearn - Master Web Development" />
+        <meta property="og:url" content="https://www.mrdeveloper.in/" />
+        <meta property="og:title" content="MrDeveloper - Master Web Development" />
         <meta property="og:description" content="Complete web development tutorials covering HTML, CSS, JavaScript, and Tailwind CSS with interactive examples." />
         <meta property="og:image" content="/og-image.jpg" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="CodeLearn - Master Web Development" />
+        <meta name="twitter:title" content="MrDeveloper - Master Web Development" />
         <meta name="twitter:description" content="Learn web development with structured tutorials and hands-on examples." />
 
         {/* Canonical URL */}
-        <link rel="canonical" href="https://codelearn.dev/" />
+        <link rel="canonical" href="https://www.mrdeveloper.in/" />
         
         {/* Theme Color Meta */}
         <meta name="theme-color" content="#3b82f6" />
@@ -661,7 +661,7 @@ export default function Home() {
               "@type": "EducationalOrganization",
               "name": "CodeLearn",
               "description": "Learn web development with comprehensive tutorials",
-              "url": "https://codelearn.dev",
+              "url": "https://www.mrdeveloper.in/",
               "sameAs": [
                 "https://github.com/codelearn",
                 "https://twitter.com/codelearn"

@@ -126,7 +126,7 @@ export default function Navbar() {
               <Code className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 transition-colors duration-300">CodeLearn</h2>
+              <h2 className="text-lg font-bold text-gray-900 transition-colors duration-300">MrDeveloper</h2>
               <p className="text-xs text-gray-600 transition-colors duration-300">
                 Navigation Menu
               </p>
@@ -182,7 +182,7 @@ export default function Navbar() {
                 className="rounded-lg opacity-80 shadow-sm"
               />
               <div className="text-sm">
-                <div className="font-semibold text-gray-900 transition-colors duration-300">CodeLearn Platform</div>
+                <div className="font-semibold text-gray-900 transition-colors duration-300">MrDeveloper Platform</div>
                 <div className="text-xs text-gray-600 transition-colors duration-300">Learn. Practice. Excel.</div>
               </div>
             </div>
