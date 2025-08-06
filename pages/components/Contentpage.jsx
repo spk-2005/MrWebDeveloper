@@ -405,9 +405,38 @@ export default function Contentpage({
     }
   };
 
-  const processPostContent = (code) => {
+  const processPostContent = (code, images) => {
     if (!code) return '';
-    return code.replace(/\n/g, '<br>').replace(/ /g, '&nbsp;');
+    
+    let processedCode = code.replace(/\n/g, '<br>').replace(/ /g, '&nbsp;');
+    
+    // If there are images, replace img tags with actual images in order
+    if (images && images.length > 0) {
+      let imageIndex = 0;
+      
+      // Replace img tags with actual images
+      processedCode = processedCode.replace(/<img([^>]*)>/g, (match, attributes) => {
+        if (imageIndex < images.length) {
+          const currentImage = images[imageIndex];
+          imageIndex++;
+          
+          // Extract existing attributes like alt, class, etc.
+          const altMatch = attributes.match(/alt=["']([^"']*)["']/);
+          const classMatch = attributes.match(/class=["']([^"']*)["']/);
+          const styleMatch = attributes.match(/style=["']([^"']*)["']/);
+          
+          const alt = altMatch ? altMatch[1] : `Image ${imageIndex}`;
+          const className = classMatch ? classMatch[1] : '';
+          const style = styleMatch ? styleMatch[1] : '';
+          
+          // Return the actual image
+          return `<img src="${currentImage}" alt="${alt}" class="${className}" style="${style}" />`;
+        }
+        return match; // Return original if no more images
+      });
+    }
+    
+    return processedCode;
   };
 
   const getCurrentLessonIndex = () => {
@@ -532,6 +561,7 @@ export default function Contentpage({
           onClose={() => setShowShareModal(false)}
         />
       )}
+      
       <div className="">
         {/* Breadcrumb & Actions */}
         <div 
@@ -598,7 +628,7 @@ export default function Contentpage({
                 <div className="rounded-lg overflow-hidden mb-2 relative">
                   <div className="p-4 overflow-x-auto">
                     <pre className="text-sm text-black">
-                      <code dangerouslySetInnerHTML={{ __html: processPostContent(post.code) }} />
+                      <code dangerouslySetInnerHTML={{ __html: processPostContent(post.code, post.images) }} />
                     </pre>
                   </div>
                 </div>
@@ -611,9 +641,6 @@ export default function Contentpage({
               )}
             </div>
           </article>
-
-          {/* Feedback Section */}
-        
 
           {/* Navigation Footer */}
           <div className="rounded-lg border  p-6 shadow-sm">
