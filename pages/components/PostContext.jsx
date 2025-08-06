@@ -1,69 +1,42 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 const PostsContext = createContext();
 
-// Cache configuration
-const CACHE_KEY = 'codelearn_posts_cache';
-const CACHE_VERSION = '1.0';
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+// In-memory cache for Claude.ai compatibility
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const MAX_RETRIES = 2;
 
-// Optimized storage utilities with better error handling
-const storage = {
+// In-memory storage (no localStorage)
+let memoryCache = {
+  data: null,
+  timestamp: null,
+  version: '2.0'
+};
+
+// Optimized cache utilities
+const cache = {
   get: (key) => {
-    try {
-      if (typeof window === 'undefined') return null;
-      const item = localStorage.getItem(key);
-      if (!item) return null;
-      
-      const parsed = JSON.parse(item);
-      
-      // Check expiry and version
-      if (parsed.expiry && Date.now() > parsed.expiry) {
-        localStorage.removeItem(key);
-        return null;
-      }
-      
-      if (parsed.version !== CACHE_VERSION) {
-        localStorage.removeItem(key);
-        return null;
-      }
-      
-      return parsed.data;
-    } catch (error) {
-      console.warn('Cache read error:', error);
-      try {
-        localStorage.removeItem(key);
-      } catch (cleanupError) {
-        console.warn('Cache cleanup error:', cleanupError);
-      }
+    if (!memoryCache.data || !memoryCache.timestamp) return null;
+    
+    const age = Date.now() - memoryCache.timestamp;
+    if (age > CACHE_DURATION) {
+      memoryCache = { data: null, timestamp: null, version: '2.0' };
       return null;
     }
+    
+    return memoryCache.data;
   },
   
   set: (key, data) => {
-    try {
-      if (typeof window === 'undefined') return;
-      
-      const item = {
-        data,
-        expiry: Date.now() + CACHE_DURATION,
-        version: CACHE_VERSION,
-        timestamp: Date.now()
-      };
-      
-      localStorage.setItem(key, JSON.stringify(item));
-    } catch (error) {
-      console.warn('Cache write error:', error);
-      // If storage is full, try to clear some space
-      if (error.name === 'QuotaExceededError') {
-        try {
-          localStorage.clear();
-          console.log('Cleared localStorage due to quota exceeded');
-        } catch (clearError) {
-          console.warn('Failed to clear localStorage:', clearError);
-        }
-      }
-    }
+    memoryCache = {
+      data,
+      timestamp: Date.now(),
+      version: '2.0'
+    };
+  },
+  
+  clear: () => {
+    memoryCache = { data: null, timestamp: null, version: '2.0' };
   }
 };
 
@@ -77,307 +50,288 @@ export const usePostsContext = () => {
 
 export const PostsProvider = ({ children }) => {
   const [allPosts, setAllPosts] = useState([]);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
-
-  // Create a memoized lookup map for O(1) post retrieval
-  const postLookupMap = useMemo(() => {
-    const map = new Map();
+  const abortControllerRef = useRef(null);
+  
+  const postMaps = useMemo(() => {
+    const lookupMap = new Map();
+    const languageMap = new Map();
+    const slugMap = new Map();
+    
     allPosts.forEach(post => {
+      // Main lookup
       if (post.language && post.heading) {
         const key = `${post.language.toLowerCase()}-${post.heading.toLowerCase()}`;
-        map.set(key, post);
+        lookupMap.set(key, post);
       }
-    });
-    return map;
-  }, [allPosts]);
-
-  // Group posts by language (memoized)
-  const postsByLanguage = useMemo(() => {
-    const grouped = {};
-    allPosts.forEach(post => {
+      
+      // Language grouping
       const lang = post.language?.toLowerCase();
       if (lang) {
-        if (!grouped[lang]) grouped[lang] = [];
-        grouped[lang].push(post);
+        if (!languageMap.has(lang)) {
+          languageMap.set(lang, []);
+        }
+        languageMap.get(lang).push(post);
+      }
+      
+      // Slug lookup
+      if (post.slug) {
+        slugMap.set(post.slug, post);
       }
     });
-    return grouped;
+    
+    return { lookupMap, languageMap, slugMap };
   }, [allPosts]);
 
-  // Optimized fetch function with retry logic and better error handling
-  const fetchPosts = useCallback(async (forceRefresh = false) => {
+  // Optimized fetch with aggressive caching and parallel processing
+  const fetchPosts = useCallback(async (forceRefresh = false, options = {}) => {
+    // Cancel any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
     try {
       setError(null);
       
-      // Check cache first (unless force refresh)
+      // Check cache first
       if (!forceRefresh) {
-        const cached = storage.get(CACHE_KEY);
-        if (cached && cached.posts && Array.isArray(cached.posts) && cached.posts.length > 0) {
-          console.log('📦 Loading posts from cache');
+        const cached = cache.get('posts');
+        if (cached?.posts?.length > 0) {
+          console.log('⚡ Cache hit - instant load');
           setAllPosts(cached.posts);
-          setLastFetched(cached.timestamp);
-          setIsInitialLoading(false);
-          setRetryCount(0);
+          setLastFetched(cached.timestamp || Date.now());
+          setIsInitialLoad(false);
           return cached.posts;
         }
       }
 
-      console.log('🌐 Fetching posts from API...');
-      setIsInitialLoading(true);
+      setIsLoading(true);
+      console.log('🚀 Fetching posts...');
       
-      // Create abort controller for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      // Create new abort controller
+      abortControllerRef.current = new AbortController();
+      const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 8000); // 8s timeout
       
-      let response;
-      try {
-        response = await fetch('/api/posts/all', {
-          signal: controller.signal,
-          headers: {
-            'Cache-Control': 'max-age=300', // 5 minutes browser cache
-            'Accept': 'application/json',
-          }
-        });
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        if (fetchError.name === 'AbortError') {
-          throw new Error('Request timed out. Please check your connection and try again.');
-        }
-        throw new Error(`Network error: ${fetchError.message}`);
-      }
+      // Optimized fetch with minimal payload
+      const response = await fetch('/api/posts/all?limit=500&lean=true', {
+        method: 'GET',
+        signal: abortControllerRef.current.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'max-age=300',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        // Add fetch optimizations
+        keepalive: true,
+        mode: 'cors'
+      });
       
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}: `;
-        try {
-          const errorData = await response.json();
-          errorMessage += errorData.message || 'Failed to fetch posts';
-          console.error('API Error Details:', errorData);
-        } catch (parseError) {
-          errorMessage += `Failed to fetch posts (${response.statusText})`;
-        }
-        throw new Error(errorMessage);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      let data;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        throw new Error('Invalid response format from server');
+      const data = await response.json();
+      
+      if (!data.success || !Array.isArray(data.posts)) {
+        throw new Error(data.message || 'Invalid response format');
       }
       
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response data format');
-      }
+      // Minimal post processing for speed
+      const processedPosts = data.posts.map((post, index) => ({
+        id: post.id || post._id || `post-${index}`,
+        language: post.language || 'UNKNOWN',
+        heading: post.heading || 'Untitled',
+        code: post.code || '',
+        likes: post.likes || 0,
+        views: post.views || 0,
+        images: post.images || [],
+        difficulty: post.difficulty || 'BEGINNER',
+        tags: post.tags || [],
+        slug: post.slug || `${post.language?.toLowerCase() || 'unknown'}-${post.heading?.toLowerCase().replace(/\s+/g, '-') || index}`,
+        description: post.description || '',
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        // Pre-computed search string for faster searching
+        searchText: `${post.language || ''} ${post.heading || ''} ${post.description || ''}`.toLowerCase()
+      }));
       
-      if (!data.success) {
-        throw new Error(data.message || 'API returned unsuccessful response');
-      }
-      
-      // Validate posts data
-      const posts = data.posts;
-      if (!Array.isArray(posts)) {
-        console.warn('Posts data is not an array:', typeof posts);
-        throw new Error('Invalid posts data format from server');
-      }
-      
-      // Process posts with better ID generation and validation
-      const postsWithIds = posts.map((post, index) => {
-        try {
-          return {
-            ...post,
-            id: post.id || post._id || `post-${index}-${Date.now()}`,
-            // Add computed fields for better performance
-            searchKey: `${post.language || ''} ${post.heading || ''}`.toLowerCase(),
-            slug: post.slug || (post.heading ? post.heading.replace(/\s+/g, '-').toLowerCase() : `post-${index}`)
-          };
-        } catch (processError) {
-          console.warn('Error processing post at index', index, processError);
-          return {
-            id: `error-post-${index}`,
-            language: 'UNKNOWN',
-            heading: 'Error loading post',
-            code: '// Error loading this post',
-            likes: 0,
-            views: 0,
-            images: [],
-            searchKey: 'error post',
-            slug: `error-post-${index}`
-          };
-        }
-      }).filter(post => post && post.id); // Filter out any null/undefined posts
-      
-      setAllPosts(postsWithIds);
+      // Update state
+      setAllPosts(processedPosts);
       setLastFetched(Date.now());
-      setRetryCount(0);
       
-      // Cache the processed data
-      storage.set(CACHE_KEY, {
-        posts: postsWithIds,
+      // Cache the result
+      cache.set('posts', {
+        posts: processedPosts,
         timestamp: Date.now()
       });
       
-      console.log(`✅ Loaded ${postsWithIds.length} posts successfully`);
-      return postsWithIds;
+      console.log(`✅ Loaded ${processedPosts.length} posts in ${Date.now() - (window.performance?.now() || 0)}ms`);
+      return processedPosts;
       
     } catch (err) {
-      console.error('❌ Error fetching posts:', err);
-      setError(err.message);
-      
-      // Try to use cached data as fallback
-      const cached = storage.get(CACHE_KEY);
-      if (cached && cached.posts && Array.isArray(cached.posts) && cached.posts.length > 0) {
-        console.log('📦 Using cached data as fallback due to error');
-        setAllPosts(cached.posts);
-        setLastFetched(cached.timestamp);
-        setError(`${err.message} (showing cached data)`);
-        return cached.posts;
+      if (err.name === 'AbortError') {
+        console.log('🔄 Request cancelled');
+        return;
       }
       
-      // If no cache available and this is a retryable error, set up retry
-      if (retryCount < 3 && !err.message.includes('timed out')) {
-        console.log(`🔄 Scheduling retry ${retryCount + 1}/3 in ${(retryCount + 1) * 2} seconds`);
-        setTimeout(() => {
-          setRetryCount(prev => prev + 1);
-          fetchPosts(forceRefresh);
-        }, (retryCount + 1) * 2000);
+      console.error('❌ Fetch error:', err);
+      setError(err.message);
+      
+      // Try to use stale cache as fallback
+      const staleCache = cache.get('posts');
+      if (staleCache?.posts?.length > 0) {
+        console.log('📦 Using stale cache as fallback');
+        setAllPosts(staleCache.posts);
+        setLastFetched(staleCache.timestamp);
+        setError(`${err.message} (showing cached data)`);
+        return staleCache.posts;
       }
       
       throw err;
     } finally {
-      setIsInitialLoading(false);
+      setIsLoading(false);
+      setIsInitialLoad(false);
+      abortControllerRef.current = null;
     }
-  }, [retryCount]);
+  }, []);
 
-  // Initialize data loading
+  // Initialize with immediate cache check
   useEffect(() => {
-    fetchPosts().catch(err => {
-      console.error('Initial fetch failed:', err);
-      // Error is already handled in fetchPosts
-    });
+    const initLoad = async () => {
+      // Check for immediate cache hit
+      const cached = cache.get('posts');
+      if (cached?.posts?.length > 0) {
+        console.log('⚡ Instant cache load on mount');
+        setAllPosts(cached.posts);
+        setLastFetched(cached.timestamp);
+        setIsInitialLoad(false);
+        return;
+      }
+      
+      // Otherwise fetch
+      try {
+        await fetchPosts();
+      } catch (err) {
+        console.error('Initial load failed:', err);
+      }
+    };
+    
+    initLoad();
+    
+    // Cleanup on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [fetchPosts]);
 
-  // Optimized getPost function using Map lookup
+  // Lightning-fast getters using Maps
   const getPost = useCallback((language, heading) => {
-    if (!language || !heading) {
-      console.warn('getPost called with missing parameters:', { language, heading });
-      return null;
-    }
-    
+    if (!language || !heading) return null;
     const key = `${language.toLowerCase()}-${heading.toLowerCase()}`;
-    const post = postLookupMap.get(key);
-    
-    if (post) {
-      console.log('✅ Found post:', { language: post.language, heading: post.heading });
-    } else {
-      console.log('❌ Post not found for:', { language, heading });
-    }
-    
-    return post || null;
-  }, [postLookupMap]);
+    return postMaps.lookupMap.get(key) || null;
+  }, [postMaps.lookupMap]);
 
-  // Optimized getPostsByLanguage function
   const getPostsByLanguage = useCallback((language) => {
-    if (!language) {
-      console.warn('getPostsByLanguage called with empty language');
-      return [];
-    }
-    return postsByLanguage[language.toLowerCase()] || [];
-  }, [postsByLanguage]);
+    if (!language) return [];
+    return postMaps.languageMap.get(language.toLowerCase()) || [];
+  }, [postMaps.languageMap]);
 
-  // Update post likes with optimistic updates
-  const updatePostLikes = useCallback((postId, newLikesCount) => {
-    if (!postId || typeof newLikesCount !== 'number') {
-      console.warn('Invalid parameters for updatePostLikes:', { postId, newLikesCount });
-      return;
+  const getPostBySlug = useCallback((slug) => {
+    if (!slug) return null;
+    return postMaps.slugMap.get(slug) || null;
+  }, [postMaps.slugMap]);
+
+  // Optimized search with pre-computed search text
+  const searchPosts = useCallback((query, options = {}) => {
+    if (!query?.trim()) return [];
+    
+    const { limit = 20, language } = options;
+    const searchTerm = query.toLowerCase().trim();
+    const results = [];
+    
+    for (const post of allPosts) {
+      if (language && post.language.toLowerCase() !== language.toLowerCase()) continue;
+      
+      if (post.searchText.includes(searchTerm) || 
+          post.code?.toLowerCase().includes(searchTerm)) {
+        results.push(post);
+        if (results.length >= limit) break;
+      }
     }
     
-    setAllPosts(prevPosts => 
-      prevPosts.map(post => 
-        post.id === postId 
-          ? { ...post, likes: Math.max(0, newLikesCount) }
-          : post
+    return results;
+  }, [allPosts]);
+
+  // Optimistic updates for better UX
+  const updatePostLikes = useCallback((postId, newCount) => {
+    setAllPosts(prev => 
+      prev.map(post => 
+        post.id === postId ? { ...post, likes: Math.max(0, newCount) } : post
       )
     );
   }, []);
 
-  // Refresh function
-  const refreshPosts = useCallback(() => {
-    setRetryCount(0);
-    return fetchPosts(true);
-  }, [fetchPosts]);
-
-  // Clear cache function
+  const refreshPosts = useCallback(() => fetchPosts(true), [fetchPosts]);
   const clearCache = useCallback(() => {
-    try {
-      localStorage.removeItem(CACHE_KEY);
-      console.log('Cache cleared successfully');
-    } catch (error) {
-      console.warn('Failed to clear cache:', error);
-    }
-    setRetryCount(0);
+    cache.clear();
     return fetchPosts(true);
   }, [fetchPosts]);
 
-  // Search posts function
-  const searchPosts = useCallback((query) => {
-    if (!query || typeof query !== 'string') {
-      console.warn('Invalid search query:', query);
-      return [];
-    }
-    
-    const lowerQuery = query.toLowerCase().trim();
-    if (lowerQuery.length === 0) return [];
-    
-    return allPosts.filter(post => {
-      try {
-        return post.searchKey?.includes(lowerQuery) ||
-               post.code?.toLowerCase().includes(lowerQuery) ||
-               post.description?.toLowerCase().includes(lowerQuery) ||
-               post.tags?.some(tag => tag.toLowerCase().includes(lowerQuery));
-      } catch (filterError) {
-        console.warn('Error filtering post in search:', filterError);
-        return false;
-      }
-    });
-  }, [allPosts]);
+  // Memoized computed values
+  const computedValues = useMemo(() => ({
+    totalPosts: allPosts.length,
+    availableLanguages: Array.from(postMaps.languageMap.keys()),
+    postsByLanguage: Object.fromEntries(postMaps.languageMap),
+    isHealthy: !error && allPosts.length > 0,
+    isEmpty: !isLoading && allPosts.length === 0,
+    cacheAge: lastFetched ? Date.now() - lastFetched : null
+  }), [allPosts.length, postMaps.languageMap, error, isLoading, lastFetched]);
 
-  // Memoized context value to prevent unnecessary re-renders
+  // Context value with stable references
   const contextValue = useMemo(() => ({
+    // Data
     allPosts,
-    isInitialLoading,
+    ...computedValues,
+    
+    // State
+    isLoading,
+    isInitialLoad,
     error,
     lastFetched,
-    retryCount,
+    
+    // Actions
     getPost,
     getPostsByLanguage,
+    getPostBySlug,
+    searchPosts,
     updatePostLikes,
     refreshPosts,
     clearCache,
-    searchPosts,
-    // Additional computed values
-    totalPosts: allPosts.length,
-    availableLanguages: Object.keys(postsByLanguage),
-    postsByLanguage,
-    // Health status
-    isHealthy: !error && allPosts.length > 0
+    
+    // Utilities
+    retry: refreshPosts,
+    canRetry: true
   }), [
     allPosts,
-    isInitialLoading,
+    computedValues,
+    isLoading,
+    isInitialLoad,
     error,
     lastFetched,
-    retryCount,
     getPost,
     getPostsByLanguage,
+    getPostBySlug,
+    searchPosts,
     updatePostLikes,
     refreshPosts,
-    clearCache,
-    searchPosts,
-    postsByLanguage
+    clearCache
   ]);
 
   return (
@@ -387,70 +341,251 @@ export const PostsProvider = ({ children }) => {
   );
 };
 
-// Additional custom hooks for specific use cases
+// Optimized custom hooks
 export const usePost = (language, heading) => {
-  const { getPost, isInitialLoading, error } = usePostsContext();
+  const { getPost, isInitialLoad, error } = usePostsContext();
   
   return useMemo(() => ({
     post: getPost(language, heading),
-    isLoading: isInitialLoading,
-    error
-  }), [getPost, language, heading, isInitialLoading, error]);
+    isLoading: isInitialLoad,
+    error,
+    found: !!getPost(language, heading)
+  }), [getPost, language, heading, isInitialLoad, error]);
 };
 
 export const useLanguagePosts = (language) => {
-  const { getPostsByLanguage, isInitialLoading, error } = usePostsContext();
+  const { getPostsByLanguage, isInitialLoad, error } = usePostsContext();
+  
+  return useMemo(() => {
+    const posts = getPostsByLanguage(language);
+    return {
+      posts,
+      count: posts.length,
+      isLoading: isInitialLoad,
+      error,
+      isEmpty: posts.length === 0
+    };
+  }, [getPostsByLanguage, language, isInitialLoad, error]);
+};
+
+export const useSearch = (query, options = {}) => {
+  const { searchPosts, isInitialLoad } = usePostsContext();
+  
+  return useMemo(() => {
+    if (!query?.trim() || isInitialLoad) {
+      return { results: [], isSearching: false, count: 0 };
+    }
+    
+    const results = searchPosts(query, options);
+    return {
+      results,
+      count: results.length,
+      isSearching: false,
+      hasResults: results.length > 0
+    };
+  }, [searchPosts, query, options.limit, options.language, isInitialLoad]);
+};
+
+// Performance monitoring hook
+export const usePostsPerformance = () => {
+  const { lastFetched, totalPosts, isLoading, error } = usePostsContext();
   
   return useMemo(() => ({
-    posts: getPostsByLanguage(language),
-    isLoading: isInitialLoading,
-    error
-  }), [getPostsByLanguage, language, isInitialLoading, error]);
+    cacheAge: lastFetched ? Date.now() - lastFetched : null,
+    cacheStatus: lastFetched ? 'active' : 'empty',
+    dataFreshness: lastFetched && (Date.now() - lastFetched) < CACHE_DURATION ? 'fresh' : 'stale',
+    postsLoaded: totalPosts,
+    isHealthy: !error && totalPosts > 0 && !isLoading,
+    performance: {
+      hasCache: !!lastFetched,
+      postsPerSecond: lastFetched ? totalPosts / ((Date.now() - lastFetched) / 1000) : 0
+    }
+  }), [lastFetched, totalPosts, isLoading, error]);
 };
 
-// Error boundary hook for better error handling
-export const usePostsError = () => {
-  const { error, refreshPosts, clearCache, retryCount } = usePostsContext();
+// Demo component
+const PostsDemo = () => {
+  const { 
+    totalPosts, 
+    availableLanguages, 
+    isLoading, 
+    isInitialLoad, 
+    error, 
+    refreshPosts,
+    isHealthy 
+  } = usePostsContext();
   
-  const retry = useCallback(() => {
-    refreshPosts().catch(err => {
-      console.error('Manual retry failed:', err);
-    });
-  }, [refreshPosts]);
-  
-  const resetCache = useCallback(() => {
-    clearCache().catch(err => {
-      console.error('Cache reset failed:', err);
-    });
-  }, [clearCache]);
-  
-  return {
-    error,
-    hasError: !!error,
-    retry,
-    resetCache,
-    retryCount,
-    canRetry: retryCount < 3
-  };
-};
+  const perf = usePostsPerformance();
+  const jsxPosts = useLanguagePosts('jsx');
+  const searchResults = useSearch('react hooks', { limit: 5 });
 
-// Default export (keep your existing page component)
-const PostContextPage = () => {
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      padding: '20px',
-      textAlign: 'center'
-    }}>
-      <h1>Post Context Provider</h1>
-      <p>This page should not be accessed directly.</p>
-      <p>It contains the context provider for managing posts throughout the application.</p>
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg mb-6">
+        <h1 className="text-2xl font-bold mb-2">⚡ Optimized Posts Context</h1>
+        <p className="text-blue-100">Lightning-fast data fetching with intelligent caching</p>
+      </div>
+
+      {/* Performance Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+          <div className="text-sm text-gray-600">Total Posts</div>
+          <div className="text-2xl font-bold text-gray-800">{totalPosts}</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+          <div className="text-sm text-gray-600">Languages</div>
+          <div className="text-2xl font-bold text-gray-800">{availableLanguages.length}</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
+          <div className="text-sm text-gray-600">Cache Status</div>
+          <div className="text-sm font-bold text-gray-800 capitalize">
+            {perf.cacheStatus} • {perf.dataFreshness}
+          </div>
+        </div>
+      </div>
+
+      {/* Status Indicators */}
+      <div className="mb-6 space-y-2">
+        {isInitialLoad && (
+          <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              <span className="text-blue-800">Initial loading...</span>
+            </div>
+          </div>
+        )}
+        
+        {isLoading && !isInitialLoad && (
+          <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 mr-2"></div>
+              <span className="text-yellow-800">Refreshing data...</span>
+            </div>
+          </div>
+        )}
+        
+        {error && (
+          <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+            <div className="flex items-center justify-between">
+              <span className="text-red-800">⚠️ {error}</span>
+              <button 
+                onClick={refreshPosts}
+                className="text-red-600 hover:text-red-800 font-medium text-sm"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {isHealthy && !isLoading && (
+          <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+            <span className="text-green-800">✅ System healthy • Data loaded successfully</span>
+          </div>
+        )}
+      </div>
+
+      {/* Language Examples */}
+      {availableLanguages.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3">Available Languages</h3>
+          <div className="flex flex-wrap gap-2">
+            {availableLanguages.slice(0, 10).map(lang => (
+              <span 
+                key={lang}
+                className="px-3 py-1 bg-gray-100 rounded-full text-sm font-medium text-gray-700"
+              >
+                {lang.toUpperCase()}
+              </span>
+            ))}
+            {availableLanguages.length > 10 && (
+              <span className="px-3 py-1 bg-gray-200 rounded-full text-sm text-gray-600">
+                +{availableLanguages.length - 10} more
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* JSX Posts Example */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-3">JSX Posts ({jsxPosts.count})</h3>
+        {jsxPosts.isLoading ? (
+          <div className="text-gray-500">Loading JSX posts...</div>
+        ) : jsxPosts.posts.length > 0 ? (
+          <div className="space-y-2">
+            {jsxPosts.posts.slice(0, 3).map(post => (
+              <div key={post.id} className="bg-gray-50 p-3 rounded border">
+                <div className="font-medium">{post.heading}</div>
+                <div className="text-sm text-gray-600">
+                  {post.likes} likes • {post.views} views
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-gray-500">No JSX posts found</div>
+        )}
+      </div>
+
+      {/* Search Example */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-3">Search Results: "react hooks"</h3>
+        {searchResults.hasResults ? (
+          <div className="space-y-2">
+            {searchResults.results.map(post => (
+              <div key={post.id} className="bg-blue-50 p-3 rounded border">
+                <div className="font-medium">{post.heading}</div>
+                <div className="text-sm text-gray-600">
+                  {post.language} • {post.likes} likes
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-gray-500">No results found for "react hooks"</div>
+        )}
+      </div>
+
+      {/* Performance Metrics */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h3 className="text-lg font-semibold mb-2">Performance Metrics</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <div className="text-gray-600">Cache Age</div>
+            <div className="font-mono">
+              {perf.cacheAge ? `${Math.round(perf.cacheAge / 1000)}s` : 'N/A'}
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-600">Health Status</div>
+            <div className={perf.isHealthy ? 'text-green-600' : 'text-red-600'}>
+              {perf.isHealthy ? 'Healthy' : 'Issues'}
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-600">Has Cache</div>
+            <div className={perf.performance.hasCache ? 'text-green-600' : 'text-gray-600'}>
+              {perf.performance.hasCache ? 'Yes' : 'No'}
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-600">Data Status</div>
+            <div className="capitalize">{perf.dataFreshness}</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default PostContextPage;
+// Wrapper component
+const OptimizedPostsApp = () => {
+  return (
+    <PostsProvider>
+      <PostsDemo />
+    </PostsProvider>
+  );
+};
+
+export default OptimizedPostsApp;

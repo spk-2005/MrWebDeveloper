@@ -1,46 +1,47 @@
-// src/app/lib/models/post.js
+// src/app/lib/models/post.js - Ultra-optimized version
 import mongoose from 'mongoose';
 
+// Optimized schema for maximum performance
 const postSchema = new mongoose.Schema({
   language: {
     type: String,
     required: true,
-    index: true, // Single field index for language queries
+    uppercase: true,
     trim: true,
-    uppercase: true // Normalize to uppercase for consistency
+    index: true,
+    maxlength: 20
   },
   heading: {
     type: String,
     required: true,
     trim: true,
-    maxlength: 200 // Prevent extremely long headings
+    maxlength: 150,
+    index: true
   },
   code: {
     type: String,
     required: true,
-    maxlength: 50000 // Reasonable limit for code snippets
+    maxlength: 100000
   },
   likes: {
     type: Number,
     default: 0,
-    min: 0, // Prevent negative likes
-    index: true // Index for sorting by popularity
+    min: 0,
+    index: true
   },
-  images: {
-    type: [String], // Base64 strings or URLs
-    default: [],
-    validate: {
-      validator: function(arr) {
-        return arr.length <= 10; // Limit number of images
-      },
-      message: 'Maximum 10 images allowed per post'
-    }
-  },
-  // Additional fields for better functionality
   views: {
     type: Number,
     default: 0,
-    min: 0
+    min: 0,
+    index: true
+  },
+  images: {
+    type: [String],
+    default: [],
+    validate: {
+      validator: arr => arr.length <= 5,
+      message: 'Maximum 5 images allowed'
+    }
   },
   difficulty: {
     type: String,
@@ -51,108 +52,102 @@ const postSchema = new mongoose.Schema({
   tags: {
     type: [String],
     default: [],
-    index: true // For tag-based searches
+    index: true,
+    validate: {
+      validator: arr => arr.length <= 10,
+      message: 'Maximum 10 tags allowed'
+    }
   },
   isPublished: {
     type: Boolean,
     default: true,
-    index: true // For filtering published content
+    index: true
   },
-  // SEO and search optimization
   slug: {
     type: String,
     unique: true,
-    sparse: true // Allow null values but ensure uniqueness when present
+    sparse: true,
+    maxlength: 200
   },
   description: {
     type: String,
-    maxlength: 500,
+    maxlength: 300,
     trim: true
+  },
+  // Pre-computed fields for performance
+  popularity: {
+    type: Number,
+    default: 0,
+    index: true
+  },
+  codeLength: {
+    type: Number,
+    default: 0
+  },
+  linesCount: {
+    type: Number,
+    default: 0
   }
 }, {
-  timestamps: true, // Automatically adds createdAt and updatedAt
-  // Optimize for read performance
-  read: 'secondaryPreferred',
-  // Enable strict mode
+  timestamps: true,
+  // Performance optimizations
   strict: true,
-  // Optimize JSON output
+  minimize: false,
+  read: 'secondaryPreferred',
+  // Optimize JSON serialization
   toJSON: {
-    virtuals: true,
+    virtuals: false,
     transform: function(doc, ret) {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
+      delete ret.codeLength;
+      delete ret.linesCount;
       return ret;
     }
   },
-  toObject: {
-    virtuals: true
-  }
+  toObject: { virtuals: false }
 });
 
-// COMPOUND INDEXES for better query performance
-// Most important - queries by language sorted by date
-postSchema.index({ language: 1, createdAt: -1 });
+// CRITICAL PERFORMANCE INDEXES
+// Single field indexes for common queries
+postSchema.index({ language: 1 });
+postSchema.index({ isPublished: 1 });
+postSchema.index({ createdAt: -1 });
+postSchema.index({ likes: -1 });
+postSchema.index({ popularity: -1 });
 
-// For popular posts by language
-postSchema.index({ language: 1, likes: -1 });
-
-// For finding specific posts
+// Compound indexes for complex queries
+postSchema.index({ isPublished: 1, language: 1, createdAt: -1 });
+postSchema.index({ isPublished: 1, popularity: -1 });
+postSchema.index({ isPublished: 1, likes: -1 });
 postSchema.index({ language: 1, heading: 1 }, { unique: true });
 
-// For published content queries
-postSchema.index({ isPublished: 1, createdAt: -1 });
-
-// For search functionality
-postSchema.index({ 
-  language: 'text', 
-  heading: 'text', 
+// Text search index with optimized weights
+postSchema.index({
+  heading: 'text',
   description: 'text',
+  language: 'text',
   tags: 'text'
 }, {
   weights: {
     heading: 10,
-    description: 5,
-    language: 3,
-    tags: 2
+    language: 5,
+    description: 3,
+    tags: 1
   },
-  name: 'post_search_index'
+  name: 'post_text_search'
 });
 
-// VIRTUAL PROPERTIES
-postSchema.virtual('readingTime').get(function() {
-  if (!this.code) return '1-2 mins';
-  
-  const codeLength = this.code.length;
-  const linesOfCode = this.code.split('\n').length;
-  
-  // Estimate reading time based on code complexity
-  const minutes = Math.ceil((codeLength / 300) + (linesOfCode / 15));
-  
-  if (minutes <= 1) return '1-2 mins';
-  if (minutes <= 3) return '2-3 mins';
-  if (minutes <= 5) return '3-5 mins';
-  if (minutes <= 10) return '5-10 mins';
-  return `${minutes} mins`;
-});
-
-postSchema.virtual('title').get(function() {
-  return `${this.heading} - ${this.language} Tutorial`;
-});
-
-postSchema.virtual('summary').get(function() {
-  if (this.description) return this.description;
-  return `Learn ${this.heading} in ${this.language} with practical examples and detailed explanations.`;
-});
-
-// PRE-SAVE MIDDLEWARE for data optimization
+// PRE-SAVE MIDDLEWARE for performance optimization
 postSchema.pre('save', function(next) {
-  // Generate slug if not provided
-  if (!this.slug && this.heading) {
+  // Generate optimized slug
+  if (!this.slug && this.heading && this.language) {
     this.slug = `${this.language.toLowerCase()}-${this.heading}`
-      .replace(/[^\w\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .toLowerCase();
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .substring(0, 100);
   }
   
   // Normalize language
@@ -160,99 +155,275 @@ postSchema.pre('save', function(next) {
     this.language = this.language.toUpperCase();
   }
   
-  // Auto-generate description if not provided
+  // Pre-compute metrics for faster queries
+  if (this.code) {
+    this.codeLength = this.code.length;
+    this.linesCount = this.code.split('\n').length;
+  }
+  
+  // Calculate popularity score
+  this.popularity = (this.likes || 0) + Math.floor((this.views || 0) / 10);
+  
+  // Auto-generate description if missing
   if (!this.description && this.heading && this.language) {
-    this.description = `Learn ${this.heading} in ${this.language}. ` +
-                      `Complete tutorial with code examples and practical exercises.`;
+    this.description = `Learn ${this.heading} in ${this.language} with practical examples.`;
   }
   
   next();
 });
 
-// STATIC METHODS for optimized queries
-postSchema.statics.findByLanguage = function(language, options = {}) {
-  const { limit = 50, sort = { createdAt: -1 }, includeUnpublished = false } = options;
+// ULTRA-OPTIMIZED STATIC METHODS
+postSchema.statics.findAllOptimized = function(options = {}) {
+  const {
+    limit = 1000,
+    language,
+    popular = false,
+    recent = false,
+    fields = 'language heading code likes views images difficulty tags slug description createdAt updatedAt popularity'
+  } = options;
   
-  const query = { 
-    language: language.toUpperCase(),
-    ...(includeUnpublished ? {} : { isPublished: true })
-  };
+  const query = { isPublished: true };
+  if (language) query.language = language.toUpperCase();
+  
+  let sort = { createdAt: -1 };
+  if (popular) sort = { popularity: -1, createdAt: -1 };
+  if (recent) sort = { createdAt: -1 };
   
   return this.find(query)
-    .select('language heading code likes images createdAt updatedAt views difficulty tags slug description')
+    .select(fields)
     .sort(sort)
     .limit(limit)
-    .lean(); // Return plain objects for better performance
+    .lean({ virtuals: false })
+    .hint(language ? { isPublished: 1, language: 1, createdAt: -1 } : { isPublished: 1, createdAt: -1 });
 };
 
-postSchema.statics.findPopular = function(limit = 20) {
+postSchema.statics.findByLanguageOptimized = function(language, options = {}) {
+  const { limit = 100, sort = { createdAt: -1 } } = options;
+  
+  return this.find({
+    language: language.toUpperCase(),
+    isPublished: true
+  })
+  .select('language heading code likes views images difficulty tags slug description createdAt updatedAt')
+  .sort(sort)
+  .limit(limit)
+  .lean({ virtuals: false })
+  .hint({ isPublished: 1, language: 1, createdAt: -1 });
+};
+
+postSchema.statics.findPopularOptimized = function(limit = 50) {
   return this.find({ isPublished: true })
-    .select('language heading code likes images createdAt views difficulty tags slug description')
-    .sort({ likes: -1, views: -1, createdAt: -1 })
+    .select('language heading code likes views images difficulty tags slug description createdAt updatedAt popularity')
+    .sort({ popularity: -1, createdAt: -1 })
     .limit(limit)
-    .lean();
+    .lean({ virtuals: false })
+    .hint({ isPublished: 1, popularity: -1 });
 };
 
-postSchema.statics.findRecent = function(limit = 50) {
-  return this.find({ isPublished: true })
-    .select('language heading code likes images createdAt views difficulty tags slug description')
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .lean();
-};
-
-postSchema.statics.findBySlug = function(slug) {
-  return this.findOne({ slug, isPublished: true }).lean();
-};
-
-postSchema.statics.searchPosts = function(query, options = {}) {
+postSchema.statics.searchOptimized = function(query, options = {}) {
   const { limit = 20, language } = options;
   
   const searchQuery = {
     $text: { $search: query },
-    isPublished: true,
-    ...(language ? { language: language.toUpperCase() } : {})
+    isPublished: true
   };
   
+  if (language) searchQuery.language = language.toUpperCase();
+  
   return this.find(searchQuery, { score: { $meta: 'textScore' } })
-    .select('language heading code likes images createdAt views difficulty tags slug description')
-    .sort({ score: { $meta: 'textScore' }, createdAt: -1 })
+    .select('language heading code likes views images difficulty tags slug description createdAt updatedAt')
+    .sort({ score: { $meta: 'textScore' }, popularity: -1 })
     .limit(limit)
-    .lean();
+    .lean({ virtuals: false });
 };
 
-// INSTANCE METHODS
-postSchema.methods.incrementViews = function() {
-  this.views = (this.views || 0) + 1;
-  return this.save();
+postSchema.statics.getStatsOptimized = function() {
+  return this.aggregate([
+    { $match: { isPublished: true } },
+    {
+      $group: {
+        _id: null,
+        totalPosts: { $sum: 1 },
+        totalLikes: { $sum: '$likes' },
+        totalViews: { $sum: '$views' },
+        avgLikes: { $avg: '$likes' },
+        avgViews: { $avg: '$views' },
+        languages: { $addToSet: '$language' },
+        difficulties: { $addToSet: '$difficulty' }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        totalPosts: 1,
+        totalLikes: 1,
+        totalViews: 1,
+        avgLikes: { $round: ['$avgLikes', 0] },
+        avgViews: { $round: ['$avgViews', 0] },
+        languageCount: { $size: '$languages' },
+        languages: 1,
+        difficulties: 1
+      }
+    }
+  ]);
 };
 
-postSchema.methods.incrementLikes = function() {
-  this.likes = (this.likes || 0) + 1;
-  return this.save();
+// OPTIMIZED INSTANCE METHODS
+postSchema.methods.incrementViewsOptimized = function() {
+  return this.constructor.updateOne(
+    { _id: this._id },
+    { 
+      $inc: { views: 1 },
+      $set: { popularity: (this.likes || 0) + Math.floor(((this.views || 0) + 1) / 10) }
+    }
+  );
 };
 
-postSchema.methods.decrementLikes = function() {
-  this.likes = Math.max((this.likes || 0) - 1, 0);
-  return this.save();
+postSchema.methods.updateLikesOptimized = function(increment = true) {
+  const change = increment ? 1 : -1;
+  const newLikes = Math.max((this.likes || 0) + change, 0);
+  
+  return this.constructor.updateOne(
+    { _id: this._id },
+    { 
+      $set: { 
+        likes: newLikes,
+        popularity: newLikes + Math.floor((this.views || 0) / 10)
+      }
+    }
+  );
 };
 
-// INDEX EVENT HANDLERS
+// AGGREGATION PIPELINES for complex queries
+postSchema.statics.getLanguageStatsOptimized = function() {
+  return this.aggregate([
+    { $match: { isPublished: true } },
+    {
+      $group: {
+        _id: '$language',
+        count: { $sum: 1 },
+        totalLikes: { $sum: '$likes' },
+        totalViews: { $sum: '$views' },
+        avgLikes: { $avg: '$likes' },
+        difficulties: { $addToSet: '$difficulty' },
+        latestPost: { $max: '$createdAt' }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        language: '$_id',
+        count: 1,
+        totalLikes: 1,
+        totalViews: 1,
+        avgLikes: { $round: ['$avgLikes', 1] },
+        difficulties: 1,
+        latestPost: 1
+      }
+    },
+    { $sort: { count: -1 } }
+  ]);
+};
+
+postSchema.statics.getTrendingPostsOptimized = function(limit = 20) {
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  
+  return this.aggregate([
+    {
+      $match: {
+        isPublished: true,
+        createdAt: { $gte: weekAgo }
+      }
+    },
+    {
+      $addFields: {
+        trendScore: {
+          $add: [
+            { $multiply: ['$likes', 2] },
+            { $divide: ['$views', 5] },
+            { $multiply: [{ $divide: [{ $subtract: [new Date(), '$createdAt'] }, 86400000] }, -1] }
+          ]
+        }
+      }
+    },
+    { $sort: { trendScore: -1 } },
+    { $limit: limit },
+    {
+      $project: {
+        language: 1,
+        heading: 1,
+        code: 1,
+        likes: 1,
+        views: 1,
+        images: 1,
+        difficulty: 1,
+        tags: 1,
+        slug: 1,
+        description: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        trendScore: 1
+      }
+    }
+  ]);
+};
+
+// BULK OPERATIONS for performance
+postSchema.statics.bulkUpdateViews = function(updates) {
+  const bulkOps = updates.map(({ id, views }) => ({
+    updateOne: {
+      filter: { _id: id },
+      update: {
+        $set: { views },
+        $set: { popularity: this.likes + Math.floor(views / 10) }
+      }
+    }
+  }));
+  
+  return this.bulkWrite(bulkOps, { ordered: false });
+};
+
+// CONNECTION OPTIMIZATIONS
+postSchema.post('init', function() {
+  // Ensure indexes in development
+  if (process.env.NODE_ENV === 'development') {
+    this.constructor.ensureIndexes()
+      .then(() => console.log('✅ Post indexes ensured'))
+      .catch(err => console.error('❌ Index error:', err.message));
+  }
+});
+
+// Index monitoring
 postSchema.on('index', function(error) {
   if (error) {
-    console.error('❌ Index creation error:', error);
+    console.error('❌ Index creation error:', error.message);
   } else {
     console.log('✅ Post indexes created successfully');
   }
 });
 
-// Ensure indexes are built in development
-if (process.env.NODE_ENV === 'development') {
-  postSchema.post('init', function() {
-    this.constructor.ensureIndexes();
-  });
-}
-
+// Export with connection caching
 const Post = mongoose.models.Post || mongoose.model('Post', postSchema);
 
-export default Post;  
+// Performance monitoring method
+Post.getPerformanceMetrics = async function() {
+  try {
+    const stats = await this.collection.stats();
+    const indexes = await this.collection.getIndexes();
+    
+    return {
+      documentCount: stats.count,
+      avgObjectSize: Math.round(stats.avgObjSize || 0),
+      storageSize: Math.round((stats.storageSize || 0) / 1024 / 1024), // MB
+      indexCount: Object.keys(indexes).length,
+      indexes: Object.keys(indexes),
+      totalIndexSize: Math.round((stats.totalIndexSize || 0) / 1024 / 1024) // MB
+    };
+  } catch (error) {
+    console.error('Performance metrics error:', error.message);
+    return null;
+  }
+};
+
+export default Post;
