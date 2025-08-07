@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   ChevronRight, 
   Heart, 
@@ -15,8 +15,6 @@ import {
   MessageCircle,
   ChevronLeft
 } from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
 
 // Enhanced ShareModal component with attractive content
 const ShareModal = ({ title, activeSection, activeItem, onClose }) => {
@@ -91,7 +89,6 @@ This is exactly what I was looking for!
   };
 
   const socialLinks = useMemo(() => {
-    // Create a shorter, WhatsApp-friendly version of the content
     const whatsappContent = `🔥 ${activeItem} - ${activeSection} Tutorial
 
 ${shareContent.split('\n').slice(0, 3).join(' ')}
@@ -237,6 +234,10 @@ export default function Contentpage({
   const [likeCount, setLikeCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  
+  // Refs for dynamic content
+  const contentRef = useRef(null);
+  const dynamicStyleRef = useRef(null);
 
   const post = contentData;
   const error = post === null;
@@ -258,6 +259,182 @@ export default function Contentpage({
       setLiked(userLikes[post.id] || false);
     }
   }, [post]);
+
+  // Enhanced function to process and apply dynamic content with CSS scoping
+  const processAndApplyDynamicContent = useCallback((code, images) => {
+    if (!code) return '';
+    
+    let processedCode = code;
+    let extractedCSS = '';
+    let extractedJS = '';
+    
+    // Generate unique scope ID for this component instance
+    const scopeId = `content-scope-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Extract and process CSS
+    const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+    let styleMatch;
+    
+    while ((styleMatch = styleRegex.exec(processedCode)) !== null) {
+      extractedCSS += styleMatch[1] + '\n';
+      // Remove style tags from the content
+      processedCode = processedCode.replace(styleMatch[0], '');
+    }
+    
+    // Extract and process JavaScript
+    const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+    let scriptMatch;
+    
+    while ((scriptMatch = scriptRegex.exec(processedCode)) !== null) {
+      extractedJS += scriptMatch[1] + '\n';
+      // Remove script tags from the content
+      processedCode = processedCode.replace(scriptMatch[0], '');
+    }
+    
+    // Apply extracted CSS with proper scoping
+    if (extractedCSS) {
+      // Remove existing dynamic styles
+      if (dynamicStyleRef.current) {
+        dynamicStyleRef.current.remove();
+      }
+      
+      // Scope the CSS to only apply within our component
+      const scopedCSS = scopeCSS(extractedCSS, scopeId);
+      
+      // Create new style element
+      const styleElement = document.createElement('style');
+      styleElement.type = 'text/css';
+      styleElement.innerHTML = scopedCSS;
+      styleElement.setAttribute('data-dynamic-style', 'true');
+      styleElement.setAttribute('data-scope-id', scopeId);
+      document.head.appendChild(styleElement);
+      dynamicStyleRef.current = styleElement;
+      
+      // Store the scope ID to apply to our container
+      processedCode = `<div data-scope-id="${scopeId}">${processedCode}</div>`;
+    }
+    
+    // Process the remaining HTML content
+    processedCode = processedCode.replace(/\n/g, '<br>').replace(/ {2,}/g, match => '&nbsp;'.repeat(match.length));
+    
+    // Handle images
+    if (images && images.length > 0) {
+      let imageIndex = 0;
+      processedCode = processedCode.replace(/<img([^>]*)>/g, (match, attributes) => {
+        if (imageIndex < images.length) {
+          const currentImage = images[imageIndex];
+          imageIndex++;
+          
+          const altMatch = attributes.match(/alt=["']([^"']*)["']/);
+          const classMatch = attributes.match(/class=["']([^"']*)["']/);
+          const styleMatch = attributes.match(/style=["']([^"']*)["']/);
+          
+          const alt = altMatch ? altMatch[1] : `Image ${imageIndex}`;
+          const className = classMatch ? classMatch[1] : '';
+          const style = styleMatch ? styleMatch[1] : '';
+          
+          return `<img src="${currentImage}" alt="${alt}" class="${className}" style="${style}" loading="lazy" />`;
+        }
+        return match;
+      });
+    }
+    
+    // Execute JavaScript with scoped context
+    if (extractedJS) {
+      setTimeout(() => {
+        try {
+          // Create a safer execution context with scoped DOM access
+          const scopedJS = createScopedJavaScript(extractedJS, scopeId);
+          const scriptFunction = new Function('scopeId', scopedJS);
+          scriptFunction(scopeId);
+        } catch (error) {
+          console.warn('Error executing dynamic JavaScript:', error);
+        }
+      }, 100);
+    }
+    
+    return processedCode;
+  }, []);
+
+  // Helper function to scope CSS selectors to prevent global application
+  const scopeCSS = (css, scopeId) => {
+    // Split CSS into rules
+    const rules = css.split('}').filter(rule => rule.trim());
+    
+    return rules.map(rule => {
+      if (!rule.trim()) return '';
+      
+      const [selectors, properties] = rule.split('{');
+      if (!selectors || !properties) return rule + '}';
+      
+      // Process each selector
+      const scopedSelectors = selectors
+        .split(',')
+        .map(selector => {
+          selector = selector.trim();
+          
+          // Skip @rules, keyframes, and other special CSS rules
+          if (selector.startsWith('@') || selector.includes('@keyframes') || 
+              selector.includes('@media') || selector.includes('@import')) {
+            return selector;
+          }
+          
+          // Skip :root and html selectors to prevent global overrides
+          if (selector === ':root' || selector === 'html' || 
+              selector === 'body' || selector === '*') {
+            return `[data-scope-id="${scopeId}"] ${selector === '*' ? '*' : ''}`;
+          }
+          
+          // Add scope to regular selectors
+          return `[data-scope-id="${scopeId}"] ${selector}`;
+        })
+        .join(', ');
+      
+      return `${scopedSelectors} {${properties}}`;
+    }).join(' ');
+  };
+
+  // Helper function to create scoped JavaScript execution
+  const createScopedJavaScript = (js, scopeId) => {
+    // Replace common DOM queries with scoped versions
+    let scopedJS = js
+      // Replace document.getElementById with scoped version
+      .replace(/document\.getElementById\(/g, `document.querySelector('[data-scope-id="${scopeId}"] #`)
+      .replace(/getElementById\(/g, `document.querySelector('[data-scope-id="${scopeId}"] #`)
+      
+      // Replace document.querySelector with scoped version
+      .replace(/document\.querySelector\(/g, `document.querySelector('[data-scope-id="${scopeId}"] `)
+      .replace(/(?<!document\.)querySelector\(/g, `document.querySelector('[data-scope-id="${scopeId}"] `)
+      
+      // Replace document.querySelectorAll with scoped version
+      .replace(/document\.querySelectorAll\(/g, `document.querySelectorAll('[data-scope-id="${scopeId}"] `)
+      .replace(/(?<!document\.)querySelectorAll\(/g, `document.querySelectorAll('[data-scope-id="${scopeId}"] `)
+      
+      // Replace document.getElementsByClassName with scoped version
+      .replace(/document\.getElementsByClassName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByClassName(`)
+      .replace(/getElementsByClassName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByClassName(`)
+      
+      // Replace document.getElementsByTagName with scoped version
+      .replace(/document\.getElementsByTagName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByTagName(`)
+      .replace(/getElementsByTagName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByTagName(`);
+    
+    return scopedJS;
+  };
+
+  // Clean up dynamic styles on unmount
+  useEffect(() => {
+    return () => {
+      if (dynamicStyleRef.current) {
+        dynamicStyleRef.current.remove();
+      }
+    };
+  }, []);
+
+  // Process content when post changes
+  const processedContent = useMemo(() => {
+    if (!post || !post.code) return '';
+    return processAndApplyDynamicContent(post.code, post.images);
+  }, [post, processAndApplyDynamicContent]);
 
   const handleSetActiveItem = (item) => {
     if (setActiveItem && typeof setActiveItem === 'function') {
@@ -309,7 +486,6 @@ export default function Contentpage({
       const data = await response.json();
       
       if (data.success) {
-        // Update with server response
         setLikeCount(data.likes);
         console.log(`Successfully ${previousLiked ? 'unliked' : 'liked'} post`);
       } else {
@@ -328,7 +504,6 @@ export default function Contentpage({
       userLikes[post.id] = previousLiked;
       localStorage.setItem('userLikes', JSON.stringify(userLikes));
       
-      // Show error message to user
       alert('Failed to update like. Please try again.');
     } finally {
       setIsLiking(false);
@@ -341,7 +516,6 @@ export default function Contentpage({
     const newBookmarked = !bookmarked;
     setBookmarked(newBookmarked);
     
-    // Update localStorage for bookmarks
     const userBookmarks = JSON.parse(localStorage.getItem('userBookmarks') || '{}');
     userBookmarks[post.id] = newBookmarked;
     localStorage.setItem('userBookmarks', JSON.stringify(userBookmarks));
@@ -350,7 +524,15 @@ export default function Contentpage({
   const handleCopy = useCallback(async () => {
     if (post?.code) {
       try {
-        await navigator.clipboard.writeText(post.code.replace(/<br>/g, '\n').replace(/&nbsp;/g, ' '));
+        // Clean the code for copying (remove HTML tags and decode entities)
+        const cleanCode = post.code
+          .replace(/<[^>]*>/g, '') // Remove HTML tags
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&');
+          
+        await navigator.clipboard.writeText(cleanCode);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
@@ -359,16 +541,12 @@ export default function Contentpage({
     }
   }, [post]);
 
-  // Enhanced share function with more attractive content
   const handleShare = useCallback(async () => {
     const shareTitle = `🔥 ${activeItem} - Master ${activeSection} Like a Pro!`;
     
-    // Create multiple attractive share variations
     const attractiveTexts = [
       `🚀 Just discovered this AMAZING ${activeSection} tutorial! "${activeItem}" explained perfectly - from zero to hero! 💪 Every developer should bookmark this! 🔖`,
-
       `💡 Level up alert! 🔥 Currently mastering "${activeItem}" in ${activeSection} and this tutorial is absolutely mind-blowing! Perfect for beginners and pros alike! ✨`,
-
       `🎯 Found the holy grail of ${activeSection} tutorials! "${activeItem}" - explained so clearly, even my grandma could code! 😄 This is pure gold! 🏆`
     ];
 
@@ -403,40 +581,6 @@ export default function Contentpage({
     } catch (e) {
       return dateString;
     }
-  };
-
-  const processPostContent = (code, images) => {
-    if (!code) return '';
-    
-    let processedCode = code.replace(/\n/g, '<br>').replace(/ /g, '&nbsp;');
-    
-    // If there are images, replace img tags with actual images in order
-    if (images && images.length > 0) {
-      let imageIndex = 0;
-      
-      // Replace img tags with actual images
-      processedCode = processedCode.replace(/<img([^>]*)>/g, (match, attributes) => {
-        if (imageIndex < images.length) {
-          const currentImage = images[imageIndex];
-          imageIndex++;
-          
-          // Extract existing attributes like alt, class, etc.
-          const altMatch = attributes.match(/alt=["']([^"']*)["']/);
-          const classMatch = attributes.match(/class=["']([^"']*)["']/);
-          const styleMatch = attributes.match(/style=["']([^"']*)["']/);
-          
-          const alt = altMatch ? altMatch[1] : `Image ${imageIndex}`;
-          const className = classMatch ? classMatch[1] : '';
-          const style = styleMatch ? styleMatch[1] : '';
-          
-          // Return the actual image
-          return `<img src="${currentImage}" alt="${alt}" class="${className}" style="${style}" />`;
-        }
-        return match; // Return original if no more images
-      });
-    }
-    
-    return processedCode;
   };
 
   const getCurrentLessonIndex = () => {
@@ -477,8 +621,6 @@ export default function Contentpage({
       setBookmarked(userBookmarks[post.id] || false);
     }
   }, [post]);
-
-  const router = useRouter();
 
   if (!mounted) {
     return (
@@ -570,7 +712,7 @@ export default function Contentpage({
         >
           <nav className="flex items-center text-sm text-white">
             <button 
-              onClick={() => router.push("/")} 
+              onClick={() => window.location.href = "/"} 
               className="hover:underline transition-colors"
             >
               Home
@@ -614,6 +756,14 @@ export default function Contentpage({
             >
               <Share2 className="w-4 h-4" />
             </button>
+
+            <button
+              onClick={handleCopy}
+              className="flex items-center space-x-2 p-2 transition-all text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg"
+              title="Copy code"
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </button>
           </div>
           <div className="flex flex-wrap p-2">
             <span>Updated: {formatDate(post.lastUpdated)}</span>
@@ -623,12 +773,16 @@ export default function Contentpage({
         <div className="w-full">
           <article className="rounded-lg mb-3">
             <div className="prose prose-lg max-w-none">
-              {/* Code Example Section */}
+              {/* Enhanced Code Example Section with dynamic content support and CSS scoping */}
               {post.code ? (
                 <div className="rounded-lg overflow-hidden mb-2 relative">
-                  <div className="p-4 overflow-x-auto">
+                  <div 
+                    ref={contentRef}
+                    className="p-4 overflow-x-auto dynamic-content-container"
+                    style={{ isolation: 'isolate' }} // Create stacking context to contain styles
+                  >
                     <pre className="text-sm text-black">
-                      <code dangerouslySetInnerHTML={{ __html: processPostContent(post.code, post.images) }} />
+                      <code dangerouslySetInnerHTML={{ __html: processedContent }} />
                     </pre>
                   </div>
                 </div>
@@ -643,10 +797,10 @@ export default function Contentpage({
           </article>
 
           {/* Navigation Footer */}
-          <div className="rounded-lg border  p-6 shadow-sm">
+          <div className="rounded-lg border p-6 shadow-sm">
             <div className="flex flex-col lg:flex-row items-center justify-between space-y-4 lg:space-y-0">
               <div className="text-center lg:text-left text-black">
-                <h4 className="font-bold mb-2 ">Continue Learning</h4>
+                <h4 className="font-bold mb-2">Continue Learning</h4>
                 <p className="">Navigate through lessons at your own pace</p>
               </div>
               <div className="flex space-x-3">

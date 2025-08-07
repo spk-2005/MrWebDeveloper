@@ -9,7 +9,7 @@ export default function Terms() {
       <p>Please read these terms and conditions carefully before using Our Service.</p>
 
       <h2>Interpretation and Definitions</h2>
-      <p>Definitions like "Company", "Service", "You", "Website" refer to the same meanings used in our Privacy Policy.</p>
+      <p>Definitions like &quot;Company&quot;, &quot;Service&quot;, &quot;You&quot;, &quot;Website&quot; refer to the same meanings used in our Privacy Policy.</p>
 
       <h2>Conditions of Use</h2>
       <p>By accessing this website, you agree to comply with all applicable laws and regulations, and that you are responsible for compliance with any applicable local laws.</p>

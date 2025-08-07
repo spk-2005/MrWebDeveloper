@@ -11,12 +11,12 @@ export default function About() {
 
       <h2 style={{ fontSize: '1.8rem', marginTop: '30px', color: '#444' }}>🚀 Who Am I?</h2>
       <p style={{ fontSize: '1rem', lineHeight: '1.7' }}>
-        I'm a Computer Science & Engineering student  specializing in <strong>Data Science</strong>. Hailing from Chirala, I bring a curious mind, a problem-solving attitude, and a love for turning ideas into interactive, functional web applications.
+        I&apos;m a Computer Science & Engineering student  specializing in <strong>Data Science</strong>. Hailing from Chirala, I bring a curious mind, a problem-solving attitude, and a love for turning ideas into interactive, functional web applications.
       </p>
 
       <h2 style={{ fontSize: '1.8rem', marginTop: '30px', color: '#444' }}>💡 What Is MrDeveloper?</h2>
       <p style={{ fontSize: '1rem', lineHeight: '1.7' }}>
-        MrDeveloper is more than just a website — it’s a tech playground. From frontend designs to backend integrations, this is where I share my passion, build cool projects, and connect with like-minded creators.
+        MrDeveloper is more than just a website — it&apos;s a tech playground. From frontend designs to backend integrations, this is where I share my passion, build cool projects, and connect with like-minded creators.
       </p>
 
       <ul style={{ paddingLeft: '20px', lineHeight: '1.8' }}>
@@ -39,9 +39,9 @@ export default function About() {
         <li>And many more...</li>
       </ul>
 
-      <h2 style={{ fontSize: '1.8rem', marginTop: '30px', color: '#444' }}>📬 Let’s Connect</h2>
+      <h2 style={{ fontSize: '1.8rem', marginTop: '30px', color: '#444' }}>📬 Let&apos;s Connect</h2>
       <p style={{ fontSize: '1rem', lineHeight: '1.7' }}>
-        Got feedback, a collaboration idea, or just want to say hi? Don’t hesitate to reach out.
+        Got feedback, a collaboration idea, or just want to say hi? Don&apos;t hesitate to reach out.
       </p>
       <ul style={{ paddingLeft: '20px', lineHeight: '1.8' }}>
         <li>📧 Email: <a href="mailto:prasannasimha5002@gmail.com">prasannasimha5002@gmail.com</a></li>
@@ -50,7 +50,7 @@ export default function About() {
       </ul>
 
       <p style={{ marginTop: '30px', fontStyle: 'italic', color: '#666' }}>
-        Thanks for visiting — let’s build something amazing together! 🚀
+        Thanks for visiting — let&apos;s build something amazing together! 🚀
       </p>
     </div>
   );

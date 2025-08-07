@@ -304,7 +304,7 @@ export default function HowToLearn() {
       <div className="max-w-7xl mx-auto px-4 py-12">
         {/* Learning Methodology */}
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 mb-12 border border-white/20">
-          <h2 className="text-4xl font-bold text-white mb-8 text-center">MrDeveloper's Learning Method</h2>
+          <h2 className="text-4xl font-bold text-white mb-8 text-center">MrDeveloper&apos;s Learning Method</h2>
           <div className="grid md:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
@@ -441,7 +441,7 @@ export default function HowToLearn() {
                 {expandedTopic === topic.id && (
                   <div className="px-8 pb-8 bg-white/5">
                     <div className="pl-22">
-                      <h5 className="font-bold text-white mb-4 text-xl">What You'll Master:</h5>
+                      <h5 className="font-bold text-white mb-4 text-xl">What You&apos;ll Master:</h5>
                       <div className="grid md:grid-cols-2 gap-4 mb-6">
                         {topic.subtopics.map((subtopic, subIndex) => (
                           <div key={subIndex} className="flex items-center space-x-3">
@@ -471,7 +471,7 @@ export default function HowToLearn() {
 
         {/* Success Tips */}
         <div className="mt-12 bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
-          <h2 className="text-4xl font-bold text-white mb-8 text-center">MrDeveloper's Success Formula</h2>
+          <h2 className="text-4xl font-bold text-white mb-8 text-center">MrDeveloper&apos;s Success Formula</h2>
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="text-center p-8 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-2xl border border-blue-400/30">
               <div className="text-6xl mb-6">⚡</div>
