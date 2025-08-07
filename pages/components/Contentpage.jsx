@@ -260,7 +260,7 @@ export default function Contentpage({
     }
   }, [post]);
 
-  // Enhanced function to process and apply dynamic content with CSS scoping
+  // Function to process dynamic content with complete CSS isolation
   const processAndApplyDynamicContent = useCallback((code, images) => {
     if (!code) return '';
     
@@ -268,53 +268,28 @@ export default function Contentpage({
     let extractedCSS = '';
     let extractedJS = '';
     
-    // Generate unique scope ID for this component instance
-    const scopeId = `content-scope-${Math.random().toString(36).substr(2, 9)}`;
+    // Generate unique scope ID
+    const scopeId = `content-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Extract and process CSS
+    // Extract CSS with simpler regex
     const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
-    let styleMatch;
+    const styleMatches = [...processedCode.matchAll(styleRegex)];
     
-    while ((styleMatch = styleRegex.exec(processedCode)) !== null) {
-      extractedCSS += styleMatch[1] + '\n';
-      // Remove style tags from the content
-      processedCode = processedCode.replace(styleMatch[0], '');
-    }
+    styleMatches.forEach(match => {
+      extractedCSS += match[1] + '\n';
+      processedCode = processedCode.replace(match[0], '');
+    });
     
-    // Extract and process JavaScript
+    // Extract JavaScript
     const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
-    let scriptMatch;
+    const scriptMatches = [...processedCode.matchAll(scriptRegex)];
     
-    while ((scriptMatch = scriptRegex.exec(processedCode)) !== null) {
-      extractedJS += scriptMatch[1] + '\n';
-      // Remove script tags from the content
-      processedCode = processedCode.replace(scriptMatch[0], '');
-    }
+    scriptMatches.forEach(match => {
+      extractedJS += match[1] + '\n';
+      processedCode = processedCode.replace(match[0], '');
+    });
     
-    // Apply extracted CSS with proper scoping
-    if (extractedCSS) {
-      // Remove existing dynamic styles
-      if (dynamicStyleRef.current) {
-        dynamicStyleRef.current.remove();
-      }
-      
-      // Scope the CSS to only apply within our component
-      const scopedCSS = scopeCSS(extractedCSS, scopeId);
-      
-      // Create new style element
-      const styleElement = document.createElement('style');
-      styleElement.type = 'text/css';
-      styleElement.innerHTML = scopedCSS;
-      styleElement.setAttribute('data-dynamic-style', 'true');
-      styleElement.setAttribute('data-scope-id', scopeId);
-      document.head.appendChild(styleElement);
-      dynamicStyleRef.current = styleElement;
-      
-      // Store the scope ID to apply to our container
-      processedCode = `<div data-scope-id="${scopeId}">${processedCode}</div>`;
-    }
-    
-    // Process the remaining HTML content
+    // Process HTML content
     processedCode = processedCode.replace(/\n/g, '<br>').replace(/ {2,}/g, match => '&nbsp;'.repeat(match.length));
     
     // Handle images
@@ -339,89 +314,102 @@ export default function Contentpage({
       });
     }
     
-    // Execute JavaScript with scoped context
+    // Create completely isolated content with inline styles only
+    let isolatedContent = processedCode;
+    
+    // Convert CSS to inline styles if CSS exists
+    if (extractedCSS) {
+      isolatedContent = applyCSSAsInlineStyles(processedCode, extractedCSS, scopeId);
+    }
+    
+    // Execute JavaScript with complete isolation
     if (extractedJS) {
       setTimeout(() => {
         try {
-          // Create a safer execution context with scoped DOM access
-          const scopedJS = createScopedJavaScript(extractedJS, scopeId);
-          const scriptFunction = new Function('scopeId', scopedJS);
-          scriptFunction(scopeId);
+          const isolatedJS = createCompletelyIsolatedJS(extractedJS, scopeId);
+          const func = new Function('scopeId', isolatedJS);
+          func(scopeId);
         } catch (error) {
           console.warn('Error executing dynamic JavaScript:', error);
         }
       }, 100);
     }
     
-    return processedCode;
+    // Return content wrapped in an isolated container
+    return `<div data-isolated-content="${scopeId}" style="all: initial; font-family: inherit; color: inherit; line-height: inherit;">${isolatedContent}</div>`;
   }, []);
 
-  // Helper function to scope CSS selectors to prevent global application
-  const scopeCSS = (css, scopeId) => {
-    // Split CSS into rules
-    const rules = css.split('}').filter(rule => rule.trim());
-    
-    return rules.map(rule => {
-      if (!rule.trim()) return '';
+  // Function to apply CSS as inline styles instead of global styles
+  const applyCSSAsInlineStyles = (html, css, scopeId) => {
+    try {
+      // Parse CSS rules
+      const cssRules = parseCSSRules(css);
       
-      const [selectors, properties] = rule.split('{');
-      if (!selectors || !properties) return rule + '}';
+      // Create a temporary container to work with
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
       
-      // Process each selector
-      const scopedSelectors = selectors
-        .split(',')
-        .map(selector => {
-          selector = selector.trim();
-          
-          // Skip @rules, keyframes, and other special CSS rules
-          if (selector.startsWith('@') || selector.includes('@keyframes') || 
-              selector.includes('@media') || selector.includes('@import')) {
-            return selector;
+      // Apply styles to matching elements
+      cssRules.forEach(rule => {
+        if (rule.selector && rule.styles) {
+          try {
+            // Skip global selectors that might affect outer app
+            if (['html', 'body', '*', ':root'].includes(rule.selector.trim())) {
+              return;
+            }
+            
+            const elements = tempDiv.querySelectorAll(rule.selector);
+            elements.forEach(element => {
+              const currentStyle = element.getAttribute('style') || '';
+              const newStyles = rule.styles + '; ' + currentStyle;
+              element.setAttribute('style', newStyles);
+            });
+          } catch (e) {
+            // Skip invalid selectors
+            console.warn('Invalid CSS selector:', rule.selector);
           }
-          
-          // Skip :root and html selectors to prevent global overrides
-          if (selector === ':root' || selector === 'html' || 
-              selector === 'body' || selector === '*') {
-            return `[data-scope-id="${scopeId}"] ${selector === '*' ? '*' : ''}`;
-          }
-          
-          // Add scope to regular selectors
-          return `[data-scope-id="${scopeId}"] ${selector}`;
-        })
-        .join(', ');
+        }
+      });
       
-      return `${scopedSelectors} {${properties}}`;
-    }).join(' ');
+      return tempDiv.innerHTML;
+    } catch (error) {
+      console.warn('Error applying CSS as inline styles:', error);
+      return html;
+    }
   };
 
-  // Helper function to create scoped JavaScript execution
-  const createScopedJavaScript = (js, scopeId) => {
-    // Replace common DOM queries with scoped versions
-    let scopedJS = js
-      // Replace document.getElementById with scoped version
-      .replace(/document\.getElementById\(/g, `document.querySelector('[data-scope-id="${scopeId}"] #`)
-      .replace(/getElementById\(/g, `document.querySelector('[data-scope-id="${scopeId}"] #`)
-      
-      // Replace document.querySelector with scoped version
-      .replace(/document\.querySelector\(/g, `document.querySelector('[data-scope-id="${scopeId}"] `)
-      .replace(/(?<!document\.)querySelector\(/g, `document.querySelector('[data-scope-id="${scopeId}"] `)
-      
-      // Replace document.querySelectorAll with scoped version
-      .replace(/document\.querySelectorAll\(/g, `document.querySelectorAll('[data-scope-id="${scopeId}"] `)
-      .replace(/(?<!document\.)querySelectorAll\(/g, `document.querySelectorAll('[data-scope-id="${scopeId}"] `)
-      
-      // Replace document.getElementsByClassName with scoped version
-      .replace(/document\.getElementsByClassName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByClassName(`)
-      .replace(/getElementsByClassName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByClassName(`)
-      
-      // Replace document.getElementsByTagName with scoped version
-      .replace(/document\.getElementsByTagName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByTagName(`)
-      .replace(/getElementsByTagName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByTagName(`);
+  // Simple CSS parser
+  const parseCSSRules = (css) => {
+    const rules = [];
     
-    return scopedJS;
+    // Remove comments and normalize
+    css = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim();
+    
+    // Split into rules
+    const ruleBlocks = css.split('}').filter(block => block.trim());
+    
+    ruleBlocks.forEach(block => {
+      const parts = block.split('{');
+      if (parts.length === 2) {
+        const selector = parts[0].trim();
+        const styles = parts[1].trim();
+        
+        if (selector && styles && !selector.includes('@')) {
+          // Handle multiple selectors
+          selector.split(',').forEach(sel => {
+            rules.push({
+              selector: sel.trim(),
+              styles: styles
+            });
+          });
+        }
+      }
+    });
+    
+    return rules;
   };
 
-  // Clean up dynamic styles on unmount
+  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (dynamicStyleRef.current) {
@@ -773,13 +761,16 @@ export default function Contentpage({
         <div className="w-full">
           <article className="rounded-lg mb-3">
             <div className="prose prose-lg max-w-none">
-              {/* Enhanced Code Example Section with dynamic content support and CSS scoping */}
+              {/* Enhanced Code Example Section with simplified dynamic content support */}
               {post.code ? (
                 <div className="rounded-lg overflow-hidden mb-2 relative">
                   <div 
                     ref={contentRef}
-                    className="p-4 overflow-x-auto dynamic-content-container"
-                    style={{ isolation: 'isolate' }} // Create stacking context to contain styles
+                    className="p-4 overflow-x-auto"
+                    style={{ 
+                      isolation: 'isolate',
+                      position: 'relative'
+                    }}
                   >
                     <pre className="text-sm text-black">
                       <code dangerouslySetInnerHTML={{ __html: processedContent }} />
