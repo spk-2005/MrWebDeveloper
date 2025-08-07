@@ -260,7 +260,7 @@ export default function Contentpage({
     }
   }, [post]);
 
-  // Enhanced function to process and apply dynamic content with complete CSS isolation
+  // Enhanced function to process and apply dynamic content with CSS scoping
   const processAndApplyDynamicContent = useCallback((code, images) => {
     if (!code) return '';
     
@@ -291,30 +291,27 @@ export default function Contentpage({
       processedCode = processedCode.replace(scriptMatch[0], '');
     }
     
-    // Apply extracted CSS with complete isolation
+    // Apply extracted CSS with proper scoping
     if (extractedCSS) {
       // Remove existing dynamic styles
       if (dynamicStyleRef.current) {
         dynamicStyleRef.current.remove();
       }
       
-      // Create completely isolated CSS with CSS reset for the scoped area
-      const isolatedCSS = createIsolatedCSS(extractedCSS, scopeId);
+      // Scope the CSS to only apply within our component
+      const scopedCSS = scopeCSS(extractedCSS, scopeId);
       
       // Create new style element
       const styleElement = document.createElement('style');
       styleElement.type = 'text/css';
-      styleElement.innerHTML = isolatedCSS;
+      styleElement.innerHTML = scopedCSS;
       styleElement.setAttribute('data-dynamic-style', 'true');
       styleElement.setAttribute('data-scope-id', scopeId);
       document.head.appendChild(styleElement);
       dynamicStyleRef.current = styleElement;
       
       // Store the scope ID to apply to our container
-      processedCode = `<div class="isolated-content-container" data-scope-id="${scopeId}">${processedCode}</div>`;
-    } else {
-      // Even without extracted CSS, wrap in isolation container
-      processedCode = `<div class="isolated-content-container" data-scope-id="${scopeId}">${processedCode}</div>`;
+      processedCode = `<div data-scope-id="${scopeId}">${processedCode}</div>`;
     }
     
     // Process the remaining HTML content
@@ -359,103 +356,12 @@ export default function Contentpage({
     return processedCode;
   }, []);
 
-  // Helper function to create completely isolated CSS with reset
-  const createIsolatedCSS = (css, scopeId) => {
-    // Complete CSS reset for the isolated container
-    const cssReset = `
-      [data-scope-id="${scopeId}"] {
-        /* Reset all inherited properties */
-        all: initial !important;
-        
-        /* Reset box model */
-        box-sizing: border-box !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        
-        /* Reset typography */
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-        font-size: 16px !important;
-        font-weight: normal !important;
-        line-height: 1.5 !important;
-        color: #000 !important;
-        text-align: left !important;
-        
-        /* Reset positioning */
-        position: static !important;
-        display: block !important;
-        
-        /* Reset background */
-        background: transparent !important;
-        
-        /* Reset borders */
-        border: none !important;
-        outline: none !important;
-        
-        /* Reset transforms and animations */
-        transform: none !important;
-        animation: none !important;
-        transition: none !important;
-        
-        /* Reset flex/grid */
-        flex: none !important;
-        grid: none !important;
-        
-        /* Prevent inheritance from parent */
-        isolation: isolate !important;
-      }
-      
-      [data-scope-id="${scopeId}"] * {
-        /* Reset all properties for all children */
-        all: unset !important;
-        box-sizing: border-box !important;
-        
-        /* Set display back to its natural values */
-        display: revert !important;
-      }
-      
-      /* Re-establish basic HTML semantics inside the isolated container */
-      [data-scope-id="${scopeId}"] div { display: block !important; }
-      [data-scope-id="${scopeId}"] span { display: inline !important; }
-      [data-scope-id="${scopeId}"] p { display: block !important; margin: 1em 0 !important; }
-      [data-scope-id="${scopeId}"] h1 { display: block !important; font-size: 2em !important; font-weight: bold !important; margin: 0.67em 0 !important; }
-      [data-scope-id="${scopeId}"] h2 { display: block !important; font-size: 1.5em !important; font-weight: bold !important; margin: 0.75em 0 !important; }
-      [data-scope-id="${scopeId}"] h3 { display: block !important; font-size: 1.17em !important; font-weight: bold !important; margin: 0.83em 0 !important; }
-      [data-scope-id="${scopeId}"] h4 { display: block !important; font-size: 1em !important; font-weight: bold !important; margin: 1.12em 0 !important; }
-      [data-scope-id="${scopeId}"] h5 { display: block !important; font-size: 0.83em !important; font-weight: bold !important; margin: 1.5em 0 !important; }
-      [data-scope-id="${scopeId}"] h6 { display: block !important; font-size: 0.75em !important; font-weight: bold !important; margin: 1.67em 0 !important; }
-      [data-scope-id="${scopeId}"] img { display: inline-block !important; max-width: 100% !important; height: auto !important; }
-      [data-scope-id="${scopeId}"] a { color: #0066cc !important; text-decoration: underline !important; cursor: pointer !important; }
-      [data-scope-id="${scopeId}"] button { cursor: pointer !important; }
-      [data-scope-id="${scopeId}"] input, [data-scope-id="${scopeId}"] textarea, [data-scope-id="${scopeId}"] select {
-        font-family: inherit !important;
-        font-size: inherit !important;
-        padding: 4px !important;
-        border: 1px solid #ccc !important;
-        border-radius: 4px !important;
-        background: white !important;
-        color: black !important;
-      }
-      [data-scope-id="${scopeId}"] ul, [data-scope-id="${scopeId}"] ol { 
-        display: block !important; 
-        margin: 1em 0 !important; 
-        padding-left: 2em !important; 
-      }
-      [data-scope-id="${scopeId}"] li { display: list-item !important; }
-      [data-scope-id="${scopeId}"] ul li { list-style-type: disc !important; }
-      [data-scope-id="${scopeId}"] ol li { list-style-type: decimal !important; }
-      [data-scope-id="${scopeId}"] table { border-collapse: collapse !important; width: 100% !important; }
-      [data-scope-id="${scopeId}"] td, [data-scope-id="${scopeId}"] th { 
-        border: 1px solid #ddd !important; 
-        padding: 8px !important; 
-        text-align: left !important; 
-      }
-      [data-scope-id="${scopeId}"] th { font-weight: bold !important; background-color: #f2f2f2 !important; }
-    `;
-    
-    // Split CSS into rules and scope them properly
+  // Helper function to scope CSS selectors to prevent global application
+  const scopeCSS = (css, scopeId) => {
+    // Split CSS into rules
     const rules = css.split('}').filter(rule => rule.trim());
     
-    const scopedRules = rules.map(rule => {
+    return rules.map(rule => {
       if (!rule.trim()) return '';
       
       const [selectors, properties] = rule.split('{');
@@ -473,26 +379,19 @@ export default function Contentpage({
             return selector;
           }
           
-          // For :root, html, body selectors, scope them to the container
-          if (selector === ':root' || selector === 'html' || selector === 'body') {
-            return `[data-scope-id="${scopeId}"]`;
+          // Skip :root and html selectors to prevent global overrides
+          if (selector === ':root' || selector === 'html' || 
+              selector === 'body' || selector === '*') {
+            return `[data-scope-id="${scopeId}"] ${selector === '*' ? '*' : ''}`;
           }
           
-          // For * selector, scope it
-          if (selector === '*') {
-            return `[data-scope-id="${scopeId}"] *`;
-          }
-          
-          // Add scope to regular selectors with higher specificity
+          // Add scope to regular selectors
           return `[data-scope-id="${scopeId}"] ${selector}`;
         })
         .join(', ');
       
       return `${scopedSelectors} {${properties}}`;
     }).join(' ');
-    
-    // Combine CSS reset with scoped rules
-    return cssReset + '\n' + scopedRules;
   };
 
   // Helper function to create scoped JavaScript execution
@@ -500,34 +399,24 @@ export default function Contentpage({
     // Replace common DOM queries with scoped versions
     let scopedJS = js
       // Replace document.getElementById with scoped version
-      .replace(/document\.getElementById\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g, 
-        `document.querySelector('[data-scope-id="${scopeId}"] #$1')`)
-      .replace(/getElementById\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g, 
-        `document.querySelector('[data-scope-id="${scopeId}"] #$1')`)
+      .replace(/document\.getElementById\(/g, `document.querySelector('[data-scope-id="${scopeId}"] #`)
+      .replace(/getElementById\(/g, `document.querySelector('[data-scope-id="${scopeId}"] #`)
       
       // Replace document.querySelector with scoped version
-      .replace(/document\.querySelector\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g, 
-        `document.querySelector('[data-scope-id="${scopeId}"] $1')`)
-      .replace(/(?<!document\.)querySelector\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g, 
-        `document.querySelector('[data-scope-id="${scopeId}"] $1')`)
+      .replace(/document\.querySelector\(/g, `document.querySelector('[data-scope-id="${scopeId}"] `)
+      .replace(/(?<!document\.)querySelector\(/g, `document.querySelector('[data-scope-id="${scopeId}"] `)
       
       // Replace document.querySelectorAll with scoped version
-      .replace(/document\.querySelectorAll\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g, 
-        `document.querySelectorAll('[data-scope-id="${scopeId}"] $1')`)
-      .replace(/(?<!document\.)querySelectorAll\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g, 
-        `document.querySelectorAll('[data-scope-id="${scopeId}"] $1')`)
+      .replace(/document\.querySelectorAll\(/g, `document.querySelectorAll('[data-scope-id="${scopeId}"] `)
+      .replace(/(?<!document\.)querySelectorAll\(/g, `document.querySelectorAll('[data-scope-id="${scopeId}"] `)
       
       // Replace document.getElementsByClassName with scoped version
-      .replace(/document\.getElementsByClassName\s*\(/g, 
-        `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByClassName(`)
-      .replace(/getElementsByClassName\s*\(/g, 
-        `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByClassName(`)
+      .replace(/document\.getElementsByClassName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByClassName(`)
+      .replace(/getElementsByClassName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByClassName(`)
       
       // Replace document.getElementsByTagName with scoped version
-      .replace(/document\.getElementsByTagName\s*\(/g, 
-        `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByTagName(`)
-      .replace(/getElementsByTagName\s*\(/g, 
-        `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByTagName(`);
+      .replace(/document\.getElementsByTagName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByTagName(`)
+      .replace(/getElementsByTagName\(/g, `document.querySelector('[data-scope-id="${scopeId}"]').getElementsByTagName(`);
     
     return scopedJS;
   };
@@ -884,38 +773,17 @@ export default function Contentpage({
         <div className="w-full">
           <article className="rounded-lg mb-3">
             <div className="prose prose-lg max-w-none">
-              {/* Enhanced Code Example Section with complete CSS isolation */}
+              {/* Enhanced Code Example Section with dynamic content support and CSS scoping */}
               {post.code ? (
                 <div className="rounded-lg overflow-hidden mb-2 relative">
                   <div 
                     ref={contentRef}
-                    className="p-4 overflow-x-auto"
-                    style={{ 
-                      isolation: 'isolate',
-                      contain: 'layout style paint',
-                      position: 'relative'
-                    }}
+                    className="p-4 overflow-x-auto dynamic-content-container"
+                    style={{ isolation: 'isolate' }} // Create stacking context to contain styles
                   >
-                    <div
-                      className="isolated-content-wrapper"
-                      style={{
-                        all: 'initial',
-                        fontFamily: 'inherit',
-                        fontSize: 'inherit',
-                        lineHeight: 'inherit',
-                        color: 'inherit'
-                      }}
-                    >
-                      <code 
-                        dangerouslySetInnerHTML={{ __html: processedContent }}
-                        style={{
-                          all: 'initial',
-                          fontFamily: 'monospace',
-                          whiteSpace: 'pre-wrap',
-                          wordWrap: 'break-word'
-                        }}
-                      />
-                    </div>
+                    <pre className="text-sm text-black">
+                      <code dangerouslySetInnerHTML={{ __html: processedContent }} />
+                    </pre>
                   </div>
                 </div>
               ) : (
