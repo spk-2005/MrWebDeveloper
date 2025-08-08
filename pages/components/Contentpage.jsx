@@ -77,68 +77,70 @@ This is exactly what I was looking for!
     return attractiveTexts[Math.floor(Math.random() * attractiveTexts.length)];
   }, [activeSection, activeItem]);
 
-  const handleCopy = async () => {
-    try {
-      const textToCopy = `${shareContent}\n\n${url}`;
-      await navigator.clipboard.writeText(textToCopy);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy share text:', err);
+// Fix 2: Update the ShareModal's handleCopy function to include both text and URL
+const handleCopy = async () => {
+  try {
+    const textToCopy = `${shareContent}\n\n🔗 ${url}`; // Add URL indicator
+    await navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  } catch (err) {
+    console.error('Failed to copy share text:', err);
+  }
+};
+const socialLinks = useMemo(() => {
+  const baseContent = shareContent.split('\n').slice(0, 2).join(' '); // Get first 2 lines for shorter versions
+  
+  const whatsappContent = `${shareContent}\n\n🔗 Check it out: ${url}`;
+  
+  // For platforms with character limits, use shorter version
+  const shortContent = `🔥 ${activeItem} - ${activeSection} Tutorial\n\n${baseContent}`;
+  
+  const encodedFullText = encodeURIComponent(shareContent);
+  const encodedShortText = encodeURIComponent(shortContent);
+  const encodedUrl = encodeURIComponent(url);
+  const encodedTitle = encodeURIComponent(`${activeItem} - ${activeSection} Tutorial`);
+  const encodedWhatsAppText = encodeURIComponent(whatsappContent);
+
+  return [
+    { 
+      name: 'Twitter', 
+      icon: '🐦', 
+      color: 'hover:bg-blue-50 dark:hover:bg-blue-900/20',
+      href: `https://twitter.com/intent/tweet?text=${encodedShortText}&url=${encodedUrl}` // Twitter has 280 char limit
+    },
+    { 
+      name: 'LinkedIn', 
+      icon: '💼', 
+      color: 'hover:bg-blue-50 dark:hover:bg-blue-900/20',
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}&title=${encodedTitle}&summary=${encodedFullText}`
+    },
+    { 
+      name: 'WhatsApp', 
+      icon: '💬', 
+      color: 'hover:bg-green-50 dark:hover:bg-green-900/20',
+      href: `https://api.whatsapp.com/send?text=${encodedWhatsAppText}`
+    },
+    { 
+      name: 'Facebook', 
+      icon: '📘', 
+      color: 'hover:bg-blue-50 dark:hover:bg-blue-900/20',
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedFullText}`
+    },
+    { 
+      name: 'Telegram', 
+      icon: '✈️', 
+      color: 'hover:bg-blue-50 dark:hover:bg-blue-900/20',
+      href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedFullText}`
+    },
+    { 
+      name: 'Reddit', 
+      icon: '🤖', 
+      color: 'hover:bg-orange-50 dark:hover:bg-orange-900/20',
+      href: `https://reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}&text=${encodedFullText}`
     }
-  };
-
-  const socialLinks = useMemo(() => {
-    const whatsappContent = `🔥 ${activeItem} - ${activeSection} Tutorial
-
-${shareContent.split('\n').slice(0, 3).join(' ')}
-
-Check it out: ${url}`;
-
-    const encodedText = encodeURIComponent(shareContent);
-    const encodedUrl = encodeURIComponent(url);
-    const encodedTitle = encodeURIComponent(title);
-    const encodedWhatsAppText = encodeURIComponent(whatsappContent);
-
-    return [
-      { 
-        name: 'Twitter', 
-        icon: '🐦', 
-        color: 'hover:bg-blue-50 dark:hover:bg-blue-900/20',
-        href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`
-      },
-      { 
-        name: 'LinkedIn', 
-        icon: '💼', 
-        color: 'hover:bg-blue-50 dark:hover:bg-blue-900/20',
-        href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}&title=${encodedTitle}&summary=${encodedText}`
-      },
-      { 
-        name: 'WhatsApp', 
-        icon: '💬', 
-        color: 'hover:bg-green-50 dark:hover:bg-green-900/20',
-        href: `https://api.whatsapp.com/send?text=${encodedWhatsAppText}`
-      },
-      { 
-        name: 'Facebook', 
-        icon: '📘', 
-        color: 'hover:bg-blue-50 dark:hover:bg-blue-900/20',
-        href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`
-      },
-      { 
-        name: 'Telegram', 
-        icon: '✈️', 
-        color: 'hover:bg-blue-50 dark:hover:bg-blue-900/20',
-        href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`
-      },
-      { 
-        name: 'Reddit', 
-        icon: '🤖', 
-        color: 'hover:bg-orange-50 dark:hover:bg-orange-900/20',
-        href: `https://reddit.com/submit?url=${encodedUrl}&title=${encodedText}`
-      }
-    ];
-  }, [shareContent, url, title, activeSection, activeItem]);
+  ];
+}, [shareContent, url, activeSection, activeItem]);
 
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-50 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -415,7 +417,7 @@ export default function Contentpage({
     }
   }, [post]);
 
-// Enhanced function to process dynamic content with complete isolation
+  // Enhanced function to process dynamic content with complete isolation
   const processAndIsolateContent = useCallback((code, images) => {
     if (!code) return '';
     
@@ -480,6 +482,7 @@ export default function Contentpage({
     
     return { processedCode, scopeId };
   }, []);
+
   const handleSetActiveItem = (item) => {
     if (setActiveItem && typeof setActiveItem === 'function') {
       setActiveItem(item);
@@ -492,6 +495,7 @@ export default function Contentpage({
     }
   };
 
+  // FIXED: Updated like handler to work with the API
   const handleLike = useCallback(async () => {
     if (!post || !post.id || isLiking) {
       console.log('Cannot like: missing post data or already processing');
@@ -502,35 +506,48 @@ export default function Contentpage({
     const previousLiked = liked;
     const previousCount = likeCount;
     
-    // Optimistic update
-    const newLiked = !liked;
-    setLiked(newLiked);
-    setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
-    
-    // Update sessionStorage instead of localStorage
-    const userLikes = JSON.parse(sessionStorage.getItem('userLikes') || '{}');
-    userLikes[post.id] = newLiked;
-    sessionStorage.setItem('userLikes', JSON.stringify(userLikes));
-    
     try {
-      // Simulate API call since we can't make real ones
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Determine action based on current state
+      const action = liked ? 'unlike' : 'like';
       
-      console.log(`Successfully ${previousLiked ? 'unliked' : 'liked'} post`);
+      console.log(`Attempting to ${action} post ${post.id}`);
+      
+      // Make API call to your backend
+      const response = await fetch(`/api/posts/${post.id}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action })
+      });
+      
+      console.log('API response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API error response:', errorData);
+        throw new Error(errorData.error || `Failed to ${action} post`);
+      }
+      
+      const data = await response.json();
+      console.log('API success response:', data);
+      
+      // Update state with response from server
+      setLiked(action === 'like');
+      setLikeCount(data.likes);
+      
+      // Update sessionStorage
+      const userLikes = JSON.parse(sessionStorage.getItem('userLikes') || '{}');
+      userLikes[post.id] = action === 'like';
+      sessionStorage.setItem('userLikes', JSON.stringify(userLikes));
+      
+      console.log(`Successfully ${action}d post. New like count:`, data.likes);
       
     } catch (error) {
       console.error('Error updating like:', error);
       
-      // Revert optimistic update on error
-      setLiked(previousLiked);
-      setLikeCount(previousCount);
-      
-      // Revert sessionStorage
-      const userLikes = JSON.parse(sessionStorage.getItem('userLikes') || '{}');
-      userLikes[post.id] = previousLiked;
-      sessionStorage.setItem('userLikes', JSON.stringify(userLikes));
-      
-      alert('Failed to update like. Please try again.');
+      // Keep current state - don't revert since we never optimistically updated
+      alert(`Failed to ${liked ? 'unlike' : 'like'} post: ${error.message}. Please try again.`);
     } finally {
       setIsLiking(false);
     }
@@ -566,35 +583,34 @@ export default function Contentpage({
       }
     }
   }, [post]);
+// Fix 1: Update the handleShare function in the main component
+const handleShare = useCallback(async () => {
+  const shareTitle = `🔥 ${activeItem} - Master ${activeSection} Like a Pro!`;
+  
+  const attractiveTexts = [
+    `🚀 Just discovered this AMAZING ${activeSection} tutorial! "${activeItem}" explained perfectly - from zero to hero! 💪 Every developer should bookmark this! 🔖`,
+    `💡 Level up alert! 🔥 Currently mastering "${activeItem}" in ${activeSection} and this tutorial is absolutely mind-blowing! Perfect for beginners and pros alike! ✨`,
+    `🎯 Found the holy grail of ${activeSection} tutorials! "${activeItem}" - explained so clearly, even my grandma could code! 😄 This is pure gold! 🏆`
+  ];
 
-  const handleShare = useCallback(async () => {
-    const shareTitle = `🔥 ${activeItem} - Master ${activeSection} Like a Pro!`;
-    
-    const attractiveTexts = [
-      `🚀 Just discovered this AMAZING ${activeSection} tutorial! "${activeItem}" explained perfectly - from zero to hero! 💪 Every developer should bookmark this! 🔖`,
-      `💡 Level up alert! 🔥 Currently mastering "${activeItem}" in ${activeSection} and this tutorial is absolutely mind-blowing! Perfect for beginners and pros alike! ✨`,
-      `🎯 Found the holy grail of ${activeSection} tutorials! "${activeItem}" - explained so clearly, even my grandma could code! 😄 This is pure gold! 🏆`
-    ];
+  const randomText = attractiveTexts[Math.floor(Math.random() * attractiveTexts.length)];
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
 
-    const randomText = attractiveTexts[Math.floor(Math.random() * attractiveTexts.length)];
-    const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareContent = `${randomText}\n\nCheck it out: ${shareUrl}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: shareTitle,
-          text: shareContent,
-          url: shareUrl,
-        });
-      } catch (err) {
-        console.log('Error sharing with Web Share API:', err);
-        setShowShareModal(true);
-      }
-    } else {
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: shareTitle,
+        text: randomText, // This was missing - you were only sending URL
+        url: shareUrl,
+      });
+    } catch (err) {
+      console.log('Error sharing with Web Share API:', err);
       setShowShareModal(true);
     }
-  }, [activeItem, activeSection, setShowShareModal]);
+  } else {
+    setShowShareModal(true);
+  }
+}, [activeItem, activeSection, setShowShareModal]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Recently updated';
@@ -767,18 +783,20 @@ export default function Contentpage({
             <button
               onClick={handleLike}
               disabled={isLiking}
-              className={`flex items-center space-x-2 px-4 py-2 transition-all text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
+              className={`flex items-center space-x-2 px-4 py-2 transition-all text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-lg
                 ${liked
-                  ? 'text-red-700'
-                  : 'text-gray-700'
+                  ? 'text-red-700 bg-red-50 hover:bg-red-100'
+                  : 'text-gray-700 hover:text-red-600 hover:bg-red-50'
                 }`}
+              title={liked ? 'Unlike this tutorial' : 'Like this tutorial'}
             >
               {isLiking ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Heart className={`w-4 h-4 ${liked ? 'fill-current text-red-500' : ''}`} />
               )}
-              <span>{likeCount}</span>
+              <span className="font-medium">{likeCount}</span>
+              <span className="text-xs">{liked ? 'Liked' : 'Like'}</span>
             </button>
 
             <button
@@ -789,16 +807,10 @@ export default function Contentpage({
               <Share2 className="w-4 h-4" />
             </button>
 
-            <button
-              onClick={handleCopy}
-              className="flex items-center space-x-2 p-2 transition-all text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg"
-              title="Copy code"
-            >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </button>
+
           </div>
           <div className="flex flex-wrap p-2">
-            <span>Updated: {formatDate(post.lastUpdated)}</span>
+            <span className="text-sm text-gray-600">Updated: {formatDate(post.lastUpdated)}</span>
           </div>
         </div>
 
@@ -808,20 +820,6 @@ export default function Contentpage({
               {/* Enhanced Code Example Section with complete CSS isolation using iframe */}
               {post.code && isolatedContent ? (
                 <div className="rounded-lg overflow-hidden mb-2 relative bg-white border border-gray-200">
-                  <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-600">Code Example</span>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={handleCopy}
-                          className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded transition-colors"
-                          title="Copy code"
-                        >
-                          {copied ? '✓ Copied' : 'Copy'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                   <div className="p-4">
                     {/* Completely isolated iframe content */}
                     <IsolatedContentFrame 
