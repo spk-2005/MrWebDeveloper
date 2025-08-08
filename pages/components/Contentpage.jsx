@@ -415,7 +415,7 @@ export default function Contentpage({
     }
   }, [post]);
 
-  // Enhanced function to process dynamic content with complete isolation
+// Enhanced function to process dynamic content with complete isolation
   const processAndIsolateContent = useCallback((code, images) => {
     if (!code) return '';
     
@@ -447,16 +447,39 @@ export default function Contentpage({
       });
     }
     
-    // Clean up HTML entities and formatting
-    processedCode = processedCode
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&');
+    // Check if content contains code that should be displayed as text (not rendered as HTML)
+    const hasCodeBlocks = processedCode.includes('<pre><code>') || processedCode.includes('&lt;') || processedCode.includes('&gt;');
+    
+    if (hasCodeBlocks) {
+      // For code content, properly escape HTML and wrap in pre/code tags
+      processedCode = processedCode
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+      
+      // If it's wrapped in pre/code, escape the inner content
+      processedCode = processedCode.replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/g, (match, innerCode) => {
+        // Escape HTML characters in code blocks so they display as text
+        const escapedCode = innerCode
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+        return `<pre><code>${escapedCode}</code></pre>`;
+      });
+    } else {
+      // For non-code content, clean up HTML entities normally
+      processedCode = processedCode
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+    }
     
     return { processedCode, scopeId };
   }, []);
-
   const handleSetActiveItem = (item) => {
     if (setActiveItem && typeof setActiveItem === 'function') {
       setActiveItem(item);
