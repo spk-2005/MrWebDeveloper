@@ -1,7 +1,7 @@
 // pages/_app.js
 import '../styles/globals.css';
-import { PostsProvider } from '../pages/components/PostContext';
-import AppLoadingScreen from '../pages/components/AppLoadingScreen';
+import { PostsProvider } from './components/PostContext';
+import AppLoadingScreen from './components/AppLoadingScreen';
 
 function MyApp({ Component, pageProps }) {
  
