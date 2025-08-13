@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { usePostsContext } from '../components/PostContext';
 import { Loader2, BookOpen, Zap } from 'lucide-react';
 
 export default function AppLoadingScreen({ children }) {
+  useEffect(() => {
+  console.log("CLIENT render:", document.body.innerHTML);
+}, []);
+if (typeof window === 'undefined') {
+  console.log("SERVER render");
+}
+
   const { isInitialLoading, error } = usePostsContext();
 
   if (error) {

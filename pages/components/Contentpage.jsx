@@ -88,6 +88,7 @@ const handleCopy = async () => {
     console.error('Failed to copy share text:', err);
   }
 };
+
 const socialLinks = useMemo(() => {
   const baseContent = shareContent.split('\n').slice(0, 2).join(' '); // Get first 2 lines for shorter versions
   
@@ -221,7 +222,9 @@ const socialLinks = useMemo(() => {
   );
 };
 
-// Completely isolated iframe component for dynamic content
+// Enhanced function to process dynamic content while preserving working anchor tags
+
+// Enhanced IsolatedContentFrame component with better link handling
 const IsolatedContentFrame = React.memo(({ content, scopeId }) => {
   const iframeRef = useRef(null);
   
@@ -231,7 +234,7 @@ const IsolatedContentFrame = React.memo(({ content, scopeId }) => {
     const iframe = iframeRef.current;
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     
-    // Create completely isolated HTML document
+    // Create completely isolated HTML document with proper link styles
     const isolatedHTML = `
       <!DOCTYPE html>
       <html>
@@ -253,12 +256,41 @@ const IsolatedContentFrame = React.memo(({ content, scopeId }) => {
               background: transparent;
               font-size: 14px;
               overflow-x: auto;
+              padding: 16px;
             }
             
-            /* Prevent any external CSS from affecting this content */
-            :root {
-              all: initial;
-              font-family: inherit;
+            /* FIXED: Proper anchor tag styles */
+            a {
+              color: #3b82f6;
+              text-decoration: underline;
+              cursor: pointer;
+              transition: color 0.2s ease;
+            }
+            
+            a:hover {
+              color: #1d4ed8;
+              text-decoration-thickness: 2px;
+            }
+            
+            a:visited {
+              color: #7c3aed;
+            }
+            
+            a:active {
+              color: #dc2626;
+            }
+            
+            /* Ensure links work in different contexts */
+            a[href^="http"], a[href^="https"] {
+              position: relative;
+            }
+            
+            a[href^="mailto:"] {
+              color: #059669;
+            }
+            
+            a[href^="tel:"] {
+              color: #7c2d12;
             }
             
             /* Basic reset for common elements */
@@ -278,24 +310,37 @@ const IsolatedContentFrame = React.memo(({ content, scopeId }) => {
               overflow-x: auto;
               white-space: pre-wrap;
               word-break: break-word;
+              border: 1px solid #e5e5e5;
             }
             
             code {
-              font-family: 'Courier New', monospace;
+              font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
               background: #f0f0f0;
               padding: 2px 4px;
               border-radius: 3px;
               font-size: 0.9em;
+              color: #1e293b;
             }
             
             pre code {
               background: transparent;
               padding: 0;
+              color: #2d3748;
             }
             
             img {
               max-width: 100%;
               height: auto;
+              border-radius: 4px;
+            }
+            
+            ul, ol {
+              margin: 0.5em 0;
+              padding-left: 2em;
+            }
+            
+            li {
+              margin: 0.25em 0;
             }
             
             /* Prevent any parent styles from bleeding in */
@@ -308,12 +353,39 @@ const IsolatedContentFrame = React.memo(({ content, scopeId }) => {
               display: block;
               width: 100%;
             }
+            
+            .isolated-content * {
+              font-family: inherit;
+            }
           </style>
         </head>
         <body>
           <div class="isolated-content" data-scope="${scopeId}">
             ${content}
           </div>
+          
+          <script>
+            // FIXED: Ensure all links work properly
+            document.addEventListener('DOMContentLoaded', function() {
+              const links = document.querySelectorAll('a');
+              links.forEach(link => {
+                // Ensure external links open in new tab
+                if (link.href && (link.href.startsWith('http://') || link.href.startsWith('https://'))) {
+                  if (!link.target) {
+                    link.target = '_blank';
+                  }
+                  if (!link.rel) {
+                    link.rel = 'noopener noreferrer';
+                  }
+                }
+                
+                // Log link clicks for debugging
+                link.addEventListener('click', function(e) {
+                  console.log('Link clicked:', this.href, 'Target:', this.target);
+                });
+              });
+            });
+          </script>
         </body>
       </html>
     `;
@@ -334,7 +406,7 @@ const IsolatedContentFrame = React.memo(({ content, scopeId }) => {
           html.scrollHeight,
           html.offsetHeight
         );
-        iframe.style.height = (height + 20) + 'px'; // Add some padding
+        iframe.style.height = (height + 20) + 'px';
       } catch (e) {
         console.warn('Could not resize iframe:', e);
       }
@@ -371,12 +443,14 @@ const IsolatedContentFrame = React.memo(({ content, scopeId }) => {
         background: 'transparent',
         display: 'block'
       }}
-      sandbox="allow-scripts allow-same-origin"
+      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
       title="Isolated Content"
     />
   );
 });
 
+// Usage example in your Contentpage component:
+// Replace your existing processAndIsolateContent and IsolatedContentFrame with the above code
 export default function Contentpage({ 
   activeSection, 
   activeItem, 
@@ -399,13 +473,106 @@ export default function Contentpage({
   const post = contentData;
   const error = post === null;
 
-  // Sample lesson data for navigation
+  // Updated hierarchical sidebar data to match your main component
   const sidebarData = {
-    'HTML': ['Prerequisites', 'HTML Introduction', 'HTML Elements', 'HTML Attributes', 'HTML Forms'],
-    'CSS': ['CSS Basics', 'CSS Selectors', 'CSS Properties', 'CSS Flexbox', 'CSS Grid'],
-    'JavaScript': ['JS Introduction', 'Variables', 'Functions', 'DOM Manipulation', 'Events'],
-    'Tailwind': ['Installation', 'Utility Classes', 'Responsive Design', 'Components', 'Customization']
+    'HTML': [
+      'Prerequisites',
+      'HTML Introduction',
+      {
+        title: 'HTML Elements',
+        subItems: ['Headings', 'Paragraph', 'HyperLink', 'Image','Unordered Lists','Ordered Lists','div','span','br','hr']
+      },
+      {
+        title: 'HTML Attributes',
+        subItems: ['Global Attributes', 'Event Attributes', 'Data Attributes']
+      },
+      {
+        title: 'HTML Forms',
+        subItems: [
+          'Input Types',
+          'Form Attributes',
+          'Form Validation',
+          'Form Styling',
+          'Labels and Accessibility',
+          'Textarea',
+          'Select Dropdowns',
+          'Checkboxes and Radio Buttons',
+          'File Uploads',
+          'Buttons and Submit Types',
+          'Fieldsets and Legends',
+          'Placeholder and Default Values',
+          'Required and Optional Fields',
+          'Disabled and Readonly Fields',
+          'Form Action and Method',
+          'Autocomplete and Autofocus',
+          'Hidden Inputs',
+          'Datalist and Suggestion Lists',
+          'Date and Time Inputs',
+          'Range and Number Inputs',
+          'Pattern Matching with Regex'
+        ]
+      }
+    ],
+    'CSS': [
+      'CSS Basics',
+      {
+        title: 'CSS Selectors',
+        subItems: ['Element Selectors', 'Class Selectors', 'ID Selectors', 'Pseudo Selectors']
+      },
+      'CSS Properties',
+      {
+        title: 'CSS Flexbox',
+        subItems: ['Flex Container', 'Flex Items', 'Flex Direction', 'Justify Content']
+      },
+      {
+        title: 'CSS Grid',
+        subItems: ['Grid Container', 'Grid Items', 'Grid Template', 'Grid Areas']
+      }
+    ],
+    'JavaScript': [
+      'JS Introduction',
+      {
+        title: 'Variables',
+        subItems: ['var, let, const', 'Scope', 'Hoisting']
+      },
+      {
+        title: 'Functions',
+        subItems: ['Function Declaration', 'Arrow Functions', 'Closures', 'Callbacks']
+      },
+      {
+        title: 'DOM Manipulation',
+        subItems: ['Selecting Elements', 'Modifying Elements', 'Creating Elements']
+      },
+      'Events'
+    ],
+    'Tailwind': [
+      'Installation',
+      {
+        title: 'Utility Classes',
+        subItems: ['Layout', 'Typography', 'Colors', 'Spacing']
+      },
+      'Responsive Design',
+      {
+        title: 'Components',
+        subItems: ['Buttons', 'Cards', 'Forms', 'Navigation']
+      },
+      'Customization'
+    ]
   };
+
+  // Helper function to flatten hierarchical structure into a single array for navigation
+  const getFlattenedLessons = useCallback((sectionData) => {
+    const lessons = [];
+    sectionData.forEach(item => {
+      if (typeof item === 'string') {
+        lessons.push(item);
+      } else if (item.title && item.subItems) {
+        lessons.push(item.title); // Add parent item
+        lessons.push(...item.subItems); // Add all sub-items
+      }
+    });
+    return lessons;
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -417,71 +584,98 @@ export default function Contentpage({
     }
   }, [post]);
 
-  // Enhanced function to process dynamic content with complete isolation
-  const processAndIsolateContent = useCallback((code, images) => {
-    if (!code) return '';
+// Enhanced function to process dynamic content with proper HTML entity handling
+const processAndIsolateContent = useCallback((code, images) => {
+  if (!code) return '';
+  
+  let processedCode = code;
+  
+  // Generate unique scope ID
+  const scopeId = `content-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Handle images with proper attributes
+  if (images && images.length > 0) {
+    let imageIndex = 0;
+    processedCode = processedCode.replace(/<img([^>]*)>/g, (match, attributes) => {
+      if (imageIndex < images.length) {
+        const currentImage = images[imageIndex];
+        imageIndex++;
+        
+        const altMatch = attributes.match(/alt=["']([^"']*)["']/);
+        const classMatch = attributes.match(/class=["']([^"']*)["']/);
+        const styleMatch = attributes.match(/style=["']([^"']*)["']/);
+        
+        const alt = altMatch ? altMatch[1] : `Image ${imageIndex}`;
+        const className = classMatch ? classMatch[1] : '';
+        const style = styleMatch ? styleMatch[1] : 'max-width: 100%; height: auto;';
+        
+        return `<img src="${currentImage}" alt="${alt}" class="${className}" style="${style}" loading="lazy" />`;
+      }
+      return match;
+    });
+  }
+  
+  // First, decode HTML entities for processing
+  processedCode = processedCode
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+  
+  // Process code blocks first (pre > code structure)
+  processedCode = processedCode.replace(/<pre>\s*<code[^>]*>([\s\S]*?)<\/code>\s*<\/pre>/gi, (match, innerCode) => {
+    // Escape HTML characters in code blocks so they display as text
+    const escapedCode = innerCode
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    return `<pre><code>${escapedCode}</code></pre>`;
+  });
+  
+  // Process standalone pre tags
+  processedCode = processedCode.replace(/<pre(?![^>]*<code)([^>]*)>([\s\S]*?)<\/pre>/gi, (match, attributes, innerCode) => {
+    // Check if this pre tag doesn't already contain a code tag
+    if (!innerCode.includes('<code>')) {
+      const escapedCode = innerCode
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+      return `<pre${attributes}><code>${escapedCode}</code></pre>`;
+    }
+    return match;
+  });
+  
+  // Process inline code elements - escape HTML for display
+  processedCode = processedCode.replace(/<code([^>]*)>((?:(?!<\/code>)[\s\S])*?)<\/code>/gi, (match, attributes, innerCode) => {
+    // Skip if this code tag is inside a pre tag (already processed)
+    const beforeMatch = processedCode.substring(0, processedCode.indexOf(match));
+    const openPreTags = (beforeMatch.match(/<pre[^>]*>/gi) || []).length;
+    const closePreTags = (beforeMatch.match(/<\/pre>/gi) || []).length;
     
-    let processedCode = code;
-    
-    // Generate unique scope ID
-    const scopeId = `content-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Handle images with proper attributes
-    if (images && images.length > 0) {
-      let imageIndex = 0;
-      processedCode = processedCode.replace(/<img([^>]*)>/g, (match, attributes) => {
-        if (imageIndex < images.length) {
-          const currentImage = images[imageIndex];
-          imageIndex++;
-          
-          // Extract existing attributes
-          const altMatch = attributes.match(/alt=["']([^"']*)["']/);
-          const classMatch = attributes.match(/class=["']([^"']*)["']/);
-          const styleMatch = attributes.match(/style=["']([^"']*)["']/);
-          
-          const alt = altMatch ? altMatch[1] : `Image ${imageIndex}`;
-          const className = classMatch ? classMatch[1] : '';
-          const style = styleMatch ? styleMatch[1] : 'max-width: 100%; height: auto;';
-          
-          return `<img src="${currentImage}" alt="${alt}" class="${className}" style="${style}" loading="lazy" />`;
-        }
-        return match;
-      });
+    // If we're inside a pre tag, don't process again
+    if (openPreTags > closePreTags) {
+      return match;
     }
     
-    // Check if content contains code that should be displayed as text (not rendered as HTML)
-    const hasCodeBlocks = processedCode.includes('<pre><code>') || processedCode.includes('&lt;') || processedCode.includes('&gt;');
+    // Escape HTML characters in inline code
+    const escapedCode = innerCode
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
     
-    if (hasCodeBlocks) {
-      // For code content, properly escape HTML and wrap in pre/code tags
-      processedCode = processedCode
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&');
-      
-      // If it's wrapped in pre/code, escape the inner content
-      processedCode = processedCode.replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/g, (match, innerCode) => {
-        // Escape HTML characters in code blocks so they display as text
-        const escapedCode = innerCode
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
-        return `<pre><code>${escapedCode}</code></pre>`;
-      });
-    } else {
-      // For non-code content, clean up HTML entities normally
-      processedCode = processedCode
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&');
-    }
-    
-    return { processedCode, scopeId };
-  }, []);
+    return `<code${attributes}>${escapedCode}</code>`;
+  });
+  
+  return { processedCode, scopeId };
+}, []);
 
   const handleSetActiveItem = (item) => {
     if (setActiveItem && typeof setActiveItem === 'function') {
@@ -583,6 +777,7 @@ export default function Contentpage({
       }
     }
   }, [post]);
+
 // Fix 1: Update the handleShare function in the main component
 const handleShare = useCallback(async () => {
   const shareTitle = `🔥 ${activeItem} - Master ${activeSection} Like a Pro!`;
@@ -625,36 +820,37 @@ const handleShare = useCallback(async () => {
     }
   };
 
-  const getCurrentLessonIndex = () => {
-    const lessons = sidebarData[activeSection] || [];
+  // Updated navigation functions to work with hierarchical data
+  const getCurrentLessonIndex = useCallback(() => {
+    const lessons = getFlattenedLessons(sidebarData[activeSection] || []);
     return lessons.indexOf(activeItem);
-  };
+  }, [activeSection, activeItem, getFlattenedLessons]);
 
-  const getNextLesson = () => {
-    const lessons = sidebarData[activeSection] || [];
+  const getNextLesson = useCallback(() => {
+    const lessons = getFlattenedLessons(sidebarData[activeSection] || []);
     const currentIndex = getCurrentLessonIndex();
     return currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
-  };
+  }, [activeSection, getCurrentLessonIndex, getFlattenedLessons]);
 
-  const getPreviousLesson = () => {
-    const lessons = sidebarData[activeSection] || [];
+  const getPreviousLesson = useCallback(() => {
+    const lessons = getFlattenedLessons(sidebarData[activeSection] || []);
     const currentIndex = getCurrentLessonIndex();
     return currentIndex > 0 ? lessons[currentIndex - 1] : null;
-  };
+  }, [activeSection, getCurrentLessonIndex, getFlattenedLessons]);
 
   const handleNextLesson = useCallback(() => {
     const nextLesson = getNextLesson();
     if (nextLesson) {
       handleSetActiveItem(nextLesson);
     }
-  }, [getNextLesson]);
+  }, [getNextLesson, handleSetActiveItem]);
 
   const handlePreviousLesson = useCallback(() => {
     const previousLesson = getPreviousLesson();
     if (previousLesson) {
       handleSetActiveItem(previousLesson);
     }
-  }, [getPreviousLesson]);
+  }, [getPreviousLesson, handleSetActiveItem]);
 
   // Load user preferences on mount
   useEffect(() => {
@@ -806,8 +1002,6 @@ const handleShare = useCallback(async () => {
             >
               <Share2 className="w-4 h-4" />
             </button>
-
-
           </div>
           <div className="flex flex-wrap p-2">
             <span className="text-sm text-gray-600">Updated: {formatDate(post.lastUpdated)}</span>
