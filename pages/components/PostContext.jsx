@@ -7,7 +7,10 @@ const PostsContext = createContext();
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 const MAX_RETRIES = 2;
 
-// Multi-layer cache system
+// Check if we're running on the client side
+const isClient = typeof window !== 'undefined';
+
+// Multi-layer cache system with SSR safety
 const cacheSystem = {
   // In-memory cache (fastest)
   memoryCache: {
@@ -16,8 +19,10 @@ const cacheSystem = {
     version: '2.1'
   },
   
-  // SessionStorage cache (survives page reloads)
+  // SessionStorage cache (survives page reloads) - only on client
   getSessionCache: () => {
+    if (!isClient) return null;
+    
     try {
       const cached = sessionStorage.getItem('postsCache');
       if (cached) {
@@ -34,6 +39,8 @@ const cacheSystem = {
   },
   
   setSessionCache: (data) => {
+    if (!isClient) return;
+    
     try {
       sessionStorage.setItem('postsCache', JSON.stringify({
         ...data,
@@ -55,8 +62,12 @@ const cacheSystem = {
       }
     }
     
-    // Try session storage
-    return cacheSystem.getSessionCache();
+    // Try session storage only on client
+    if (isClient) {
+      return cacheSystem.getSessionCache();
+    }
+    
+    return null;
   },
   
   // Set data in all caches
@@ -70,16 +81,21 @@ const cacheSystem = {
     // Set memory cache
     cacheSystem.memoryCache = cacheData;
     
-    // Set session cache
-    cacheSystem.setSessionCache(cacheData);
+    // Set session cache only on client
+    if (isClient) {
+      cacheSystem.setSessionCache(cacheData);
+    }
   },
   
   clear: () => {
     cacheSystem.memoryCache = { data: null, timestamp: null, version: '2.1' };
-    try {
-      sessionStorage.removeItem('postsCache');
-    } catch (e) {
-      console.warn('Failed to clear session cache:', e);
+    
+    if (isClient) {
+      try {
+        sessionStorage.removeItem('postsCache');
+      } catch (e) {
+        console.warn('Failed to clear session cache:', e);
+      }
     }
   }
 };
@@ -99,8 +115,14 @@ export const PostsProvider = ({ children, preloadedData = null }) => {
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
   const [cacheStats, setCacheStats] = useState({ hits: 0, misses: 0 });
+  const [isMounted, setIsMounted] = useState(false);
   const abortControllerRef = useRef(null);
   const initializationRef = useRef(false);
+  
+  // Track when component is mounted on client
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   // Memoized post lookups for ultra-fast access
   const postMaps = useMemo(() => {
@@ -153,25 +175,35 @@ export const PostsProvider = ({ children, preloadedData = null }) => {
       return;
     }
     
-    // Try cache next
-    const cached = cacheSystem.get();
-    if (cached?.posts?.length > 0) {
-      console.log('💾 Using cached data:', cached.posts.length, 'posts');
-      setAllPosts(cached.posts);
-      setLastFetched(cached.timestamp);
-      setIsInitialLoading(false);
-      setCacheStats(prev => ({ ...prev, hits: prev.hits + 1 }));
-      return;
+    // Only check cache if we're mounted (client-side)
+    if (isMounted) {
+      const cached = cacheSystem.get();
+      if (cached?.posts?.length > 0) {
+        console.log('💾 Using cached data:', cached.posts.length, 'posts');
+        setAllPosts(cached.posts);
+        setLastFetched(cached.timestamp);
+        setIsInitialLoading(false);
+        setCacheStats(prev => ({ ...prev, hits: prev.hits + 1 }));
+        return;
+      }
     }
     
-    // If no cache, fetch fresh data
-    console.log('🌐 No cache available, fetching fresh data...');
-    setCacheStats(prev => ({ ...prev, misses: prev.misses + 1 }));
-    await fetchPosts(true);
-  }, [preloadedData]);
+    // If no cache and we're mounted, fetch fresh data
+    if (isMounted) {
+      console.log('🌐 No cache available, fetching fresh data...');
+      setCacheStats(prev => ({ ...prev, misses: prev.misses + 1 }));
+      await fetchPosts(true);
+    }
+  }, [preloadedData, isMounted]);
 
   // Ultra-optimized fetch with intelligent caching
   const fetchPosts = useCallback(async (forceRefresh = false, options = {}) => {
+    // Only run on client side
+    if (!isClient) {
+      console.log('🚫 Server-side detected, skipping fetch');
+      return [];
+    }
+    
     // Cancel any ongoing request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -263,7 +295,7 @@ export const PostsProvider = ({ children, preloadedData = null }) => {
     } catch (err) {
       if (err.name === 'AbortError') {
         console.log('🔄 Request cancelled');
-        return;
+        return [];
       }
       
       console.error('❌ Fetch error:', err);
@@ -279,7 +311,7 @@ export const PostsProvider = ({ children, preloadedData = null }) => {
         return staleCache.posts;
       }
       
-      throw err;
+      return [];
     } finally {
       setIsLoading(false);
       setIsInitialLoading(false);
@@ -287,9 +319,11 @@ export const PostsProvider = ({ children, preloadedData = null }) => {
     }
   }, []);
 
-  // Initialize on mount
+  // Initialize on mount - only run when component is mounted
   useEffect(() => {
-    initializeData();
+    if (isMounted) {
+      initializeData();
+    }
     
     // Cleanup on unmount
     return () => {
@@ -297,7 +331,7 @@ export const PostsProvider = ({ children, preloadedData = null }) => {
         abortControllerRef.current.abort();
       }
     };
-  }, [initializeData]);
+  }, [initializeData, isMounted]);
 
   // Optimized getters with Map lookups
   const getPost = useCallback((language, heading) => {
@@ -353,13 +387,15 @@ export const PostsProvider = ({ children, preloadedData = null }) => {
       )
     );
     
-    // Update cache
-    const cached = cacheSystem.get();
-    if (cached?.posts) {
-      const updatedPosts = cached.posts.map(post =>
-        post.id === postId ? { ...post, likes: Math.max(0, newCount) } : post
-      );
-      cacheSystem.set({ ...cached, posts: updatedPosts });
+    // Update cache only if on client
+    if (isClient) {
+      const cached = cacheSystem.get();
+      if (cached?.posts) {
+        const updatedPosts = cached.posts.map(post =>
+          post.id === postId ? { ...post, likes: Math.max(0, newCount) } : post
+        );
+        cacheSystem.set({ ...cached, posts: updatedPosts });
+      }
     }
   }, []);
 
