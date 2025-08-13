@@ -530,3 +530,6 @@ export const usePostsPerformance = () => {
     }
   }), [lastFetched, totalPosts, isLoading, error, cacheStats, dataFreshness]);
 };
+
+// ADD DEFAULT EXPORT - This makes PostsProvider the default export
+export default PostsProvider;
