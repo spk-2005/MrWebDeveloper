@@ -1,3 +1,4 @@
+// Updated ItemPage.js - Fixed navigation and content fetching
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -27,7 +28,7 @@ const SIDEBAR_DATA = {
     'HTML Introduction',
     {
       title: 'HTML Elements',
-      subItems: ['Headings', 'Paragraph', 'HyperLink', 'Image','Unordered Lists','Ordered Lists','div','span','br','hr']
+      subItems: ['Headings', 'Paragraph', 'HyperLink', 'Image','Unordered Lists','Ordered Lists','div container','span','br','hr']
     },
     {
       title: 'HTML Attributes',
@@ -107,18 +108,66 @@ const SIDEBAR_DATA = {
   ]
 };
 
-// Helper function to get all items (including sub-items) from a section
+// FIXED: Helper function to get all items (including sub-items) from a section
 const getAllItemsFromSection = (sectionData) => {
   const items = [];
-  sectionData.forEach(item => {
+  
+  if (!Array.isArray(sectionData)) {
+    console.warn('Section data is not an array:', sectionData);
+    return items;
+  }
+  
+  sectionData.forEach((item, index) => {
+    console.log(`Processing section item ${index}:`, item);
+    
     if (typeof item === 'string') {
       items.push(item);
-    } else if (item.title && item.subItems) {
-      items.push(item.title); // Add parent item
-      items.push(...item.subItems); // Add all sub-items
+      console.log('Added string item:', item);
+    } else if (item && typeof item === 'object' && item.title) {
+      // Add parent item
+      items.push(item.title);
+      console.log('Added parent item:', item.title);
+      
+      // Add all sub-items if they exist
+      if (Array.isArray(item.subItems)) {
+        item.subItems.forEach(subItem => {
+          items.push(subItem);
+          console.log('Added sub-item:', subItem);
+        });
+      }
+    } else {
+      console.warn('Unrecognized item structure at index', index, ':', item);
     }
   });
+  
+  console.log('Final items from section:', items);
   return items;
+};
+
+// FIXED: Helper function for case-insensitive and flexible matching
+const normalizeString = (str) => {
+  if (!str) return '';
+  return str.toString().toLowerCase().trim();
+};
+
+const isStringMatch = (str1, str2) => {
+  const normalized1 = normalizeString(str1);
+  const normalized2 = normalizeString(str2);
+  
+  // Direct match
+  if (normalized1 === normalized2) return true;
+  
+  // Handle URL slug format (e.g., "div-container" matches "div container")
+  const slugified1 = normalized1.replace(/\s+/g, '-');
+  const slugified2 = normalized2.replace(/\s+/g, '-');
+  if (slugified1 === slugified2) return true;
+  
+  // Handle spaces vs hyphens
+  const spaced1 = normalized1.replace(/-/g, ' ');
+  const spaced2 = normalized2.replace(/-/g, ' ');
+  if (spaced1 === spaced2) return true;
+  
+  return false;
 };
 
 // Custom hooks for better organization
@@ -177,7 +226,8 @@ const useResponsive = () => {
   return screenSize;
 };
 
-const useRouting = (section, item, router, getPost) => {
+// FIXED: Enhanced routing hook with better post lookup
+const useRouting = (section, item, router, allPosts) => {
   const [routeState, setRouteState] = useState({
     activeSection: null,
     activeItem: null,
@@ -188,31 +238,105 @@ const useRouting = (section, item, router, getPost) => {
 
   // Helper functions
   const getSectionFromUrl = useCallback((sectionSlug) => {
-    return Object.keys(SIDEBAR_DATA).includes(sectionSlug) ? sectionSlug : null;
+    // Direct match
+    if (Object.keys(SIDEBAR_DATA).includes(sectionSlug)) {
+      return sectionSlug;
+    }
+    
+    // Case insensitive match
+    const normalizedSlug = normalizeString(sectionSlug);
+    for (const sectionKey of Object.keys(SIDEBAR_DATA)) {
+      if (normalizeString(sectionKey) === normalizedSlug) {
+        return sectionKey;
+      }
+    }
+    
+    return null;
   }, []);
 
   const getItemFromUrl = useCallback((itemSlug) => {
     if (!itemSlug) return null;
+    
+    // Convert slug back to title format
     return itemSlug
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }, []);
 
-  useEffect(() => {
-    if (!router.isReady) return;
+  // FIXED: Enhanced post lookup with flexible matching
+  const findPostByLanguageAndHeading = useCallback((language, heading) => {
+    console.log(`🔍 Looking for post: language="${language}", heading="${heading}"`);
+    console.log('📊 Available posts:', allPosts.length);
+    
+    if (!allPosts || allPosts.length === 0) {
+      console.log('❌ No posts available');
+      return null;
+    }
 
+    // Log all HTML posts for debugging
+    const htmlPosts = allPosts.filter(post => 
+      normalizeString(post.language) === normalizeString(language)
+    );
+    console.log(`🌐 ${language} posts found:`, htmlPosts.length);
+    htmlPosts.forEach((post, index) => {
+      console.log(`  ${index + 1}. "${post.heading}" (id: ${post.id})`);
+    });
+
+    // Try multiple matching strategies
+    const matchingStrategies = [
+      // Strategy 1: Exact match
+      (post) => isStringMatch(post.language, language) && isStringMatch(post.heading, heading),
+      
+      // Strategy 2: Language match with flexible heading match
+      (post) => {
+        const langMatch = isStringMatch(post.language, language);
+        const headingMatch = isStringMatch(post.heading, heading);
+        console.log(`  Checking "${post.heading}": lang=${langMatch}, heading=${headingMatch}`);
+        return langMatch && headingMatch;
+      },
+      
+      // Strategy 3: Partial heading match
+      (post) => {
+        const langMatch = isStringMatch(post.language, language);
+        const headingContains = normalizeString(post.heading).includes(normalizeString(heading)) ||
+                               normalizeString(heading).includes(normalizeString(post.heading));
+        return langMatch && headingContains;
+      }
+    ];
+
+    for (let i = 0; i < matchingStrategies.length; i++) {
+      console.log(`🎯 Trying matching strategy ${i + 1}...`);
+      const found = allPosts.find(matchingStrategies[i]);
+      if (found) {
+        console.log(`✅ Found post using strategy ${i + 1}:`, found.heading);
+        return found;
+      }
+    }
+
+    console.log(`❌ No matching post found for "${heading}" in ${language}`);
+    return null;
+  }, [allPosts]);
+
+  useEffect(() => {
+    if (!router.isReady) {
+      console.log('🚫 Router not ready yet');
+      return;
+    }
+
+    console.log('🔄 Processing route change:', { section, item });
     setRouteState(prev => ({ ...prev, isProcessing: true }));
 
     // Handle invalid or incomplete URLs
     if (!section || !item) {
+      console.log('⚠️ Incomplete URL, redirecting...');
       if (section && SIDEBAR_DATA[section]) {
         const firstItem = SIDEBAR_DATA[section][0];
         const firstItemName = typeof firstItem === 'string' ? firstItem : firstItem.title;
-        const firstItemSlug = firstItemName.replace(/\s+/g, '-');
+        const firstItemSlug = firstItemName.replace(/\s+/g, '-').toLowerCase();
         router.replace(`/${section}/${firstItemSlug}`);
       } else {
-        router.replace('/HTML/Prerequisites');
+        router.replace('/HTML/prerequisites');
       }
       return;
     }
@@ -220,26 +344,44 @@ const useRouting = (section, item, router, getPost) => {
     const properSectionName = getSectionFromUrl(section);
     const itemFromUrl = getItemFromUrl(item);
 
+    console.log('🎯 Resolved:', {
+      properSectionName,
+      itemFromUrl,
+      originalSection: section,
+      originalItem: item
+    });
+
     if (properSectionName && SIDEBAR_DATA[properSectionName]) {
       // Get all valid items (including sub-items) from the section
       const allValidItems = getAllItemsFromSection(SIDEBAR_DATA[properSectionName]);
+      console.log('📝 Valid items for section:', allValidItems);
       
-      if (allValidItems.includes(itemFromUrl)) {
-        const post = getPost(properSectionName, itemFromUrl);
+      // Check if the item is valid in this section
+      const isValidItem = allValidItems.some(validItem => isStringMatch(validItem, itemFromUrl));
+      console.log('🔍 Is valid item?', isValidItem, 'for', itemFromUrl);
+      
+      if (isValidItem) {
+        // Find the exact matching item name from our sidebar data
+        const exactItemName = allValidItems.find(validItem => isStringMatch(validItem, itemFromUrl));
+        console.log('✅ Exact item name:', exactItemName);
+        
+        // Look for post with enhanced matching
+        const post = findPostByLanguageAndHeading(properSectionName, exactItemName || itemFromUrl);
         
         setRouteState({
           activeSection: properSectionName,
-          activeItem: itemFromUrl,
+          activeItem: exactItemName || itemFromUrl,
           contentData: post,
           error: post ? null : {
             type: 'CONTENT_NOT_FOUND',
             title: 'Content Not Available',
-            message: `The tutorial "${itemFromUrl}" in ${properSectionName} is currently being updated or is not available.`,
+            message: `The tutorial "${exactItemName || itemFromUrl}" in ${properSectionName} is currently being updated or is not available.`,
             suggestion: 'Try selecting another lesson from the sidebar or check back later.'
           },
           isProcessing: false
         });
       } else {
+        console.log('❌ Invalid item for section');
         setRouteState({
           activeSection: null,
           activeItem: null,
@@ -247,27 +389,28 @@ const useRouting = (section, item, router, getPost) => {
           error: {
             type: 'INVALID_ROUTE',
             title: 'Tutorial Not Found',
-            message: `The tutorial path "${section}/${item}" doesn't exist in our curriculum.`,
+            message: `The tutorial "${itemFromUrl}" doesn't exist in ${properSectionName} section.`,
             suggestion: 'Please choose a valid tutorial from our available courses.'
           },
           isProcessing: false
         });
       }
     } else {
+      console.log('❌ Invalid section');
       setRouteState({
         activeSection: null,
         activeItem: null,
         contentData: null,
         error: {
           type: 'INVALID_ROUTE',
-          title: 'Tutorial Not Found',
-          message: `The tutorial path "${section}/${item}" doesn't exist in our curriculum.`,
-          suggestion: 'Please choose a valid tutorial from our available courses.'
+          title: 'Section Not Found',
+          message: `The section "${section}" doesn't exist in our curriculum.`,
+          suggestion: 'Please choose a valid section from our available courses.'
         },
         isProcessing: false
       });
     }
-  }, [router.isReady, section, item, router, getSectionFromUrl, getItemFromUrl, getPost]);
+  }, [router.isReady, section, item, router, getSectionFromUrl, getItemFromUrl, findPostByLanguageAndHeading]);
 
   return routeState;
 };
@@ -315,7 +458,7 @@ const ErrorScreen = React.memo(({ error, router }) => {
     {
       icon: BookOpen,
       label: 'Start Learning',
-      action: () => router.push('/HTML/Prerequisites'),
+      action: () => router.push('/HTML/prerequisites'),
       variant: 'secondary'
     },
     {
@@ -389,12 +532,12 @@ SidebarToggle.displayName = 'SidebarToggle';
 export default function ItemPage() {
   const router = useRouter();
   const { section, item } = router.query;
-  const { getPost, isInitialLoading } = usePostsContext();
+  const { allPosts, isInitialLoading } = usePostsContext(); // CHANGED: Use allPosts instead of getPost
   
   // Custom hooks
   const isOnline = useOnlineStatus();
   const { isMobile, isDesktop } = useResponsive();
-  const { activeSection, activeItem, contentData, error, isProcessing } = useRouting(section, item, router, getPost);
+  const { activeSection, activeItem, contentData, error, isProcessing } = useRouting(section, item, router, allPosts);
   
   // Local state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -407,13 +550,24 @@ export default function ItemPage() {
     }
   }, [isDesktop]);
 
+  // Log posts for debugging
+  useEffect(() => {
+    console.log('📊 Total posts in context:', allPosts?.length || 0);
+    if (allPosts && allPosts.length > 0) {
+      console.log('🔍 Sample posts:');
+      allPosts.slice(0, 5).forEach((post, index) => {
+        console.log(`  ${index + 1}. ${post.language} - "${post.heading}"`);
+      });
+    }
+  }, [allPosts]);
+
   // Memoized handlers
   const handleSetActiveSection = useCallback((newSection) => {
     if (newSection && SIDEBAR_DATA[newSection]) {
       const sectionSlug = newSection;
       const firstItem = SIDEBAR_DATA[newSection][0];
       const firstItemName = typeof firstItem === 'string' ? firstItem : firstItem.title;
-      const itemSlug = firstItemName.replace(/\s+/g, '-');
+      const itemSlug = firstItemName.replace(/\s+/g, '-').toLowerCase();
       router.push(`/${sectionSlug}/${itemSlug}`);
     }
   }, [router]);
@@ -421,7 +575,7 @@ export default function ItemPage() {
   const handleSetActiveItem = useCallback((newItem) => {
     if (activeSection && newItem) {
       const sectionSlug = activeSection;
-      const itemSlug = newItem.replace(/\s+/g, '-');
+      const itemSlug = newItem.replace(/\s+/g, '-').toLowerCase();
       router.push(`/${sectionSlug}/${itemSlug}`);
     }
   }, [activeSection, router]);

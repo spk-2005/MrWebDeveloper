@@ -12,7 +12,7 @@ const sidebarData = {
     'HTML Introduction',
     {
       title: 'HTML Elements',
-      subItems: ['Headings', 'Paragraph', 'HyperLink', 'Image','Unordered Lists','Ordered Lists','div','span','br','hr']
+      subItems: ['Headings', 'Paragraph', 'HyperLink', 'Image','Unordered Lists','Ordered Lists','div container','span','br','hr']
     },
     {
       title: 'HTML Attributes',
