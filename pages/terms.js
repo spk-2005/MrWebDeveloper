@@ -4,6 +4,7 @@ export default function Terms() {
   return (
     <div>
       <h1>Terms of Service</h1>
+      
       <p>Last updated: August 06, 2025</p>
 
       <p>Please read these terms and conditions carefully before using Our Service.</p>
