@@ -1,10 +1,10 @@
   import React, { useState, useEffect } from 'react';
   import { useRouter } from 'next/router';
   import Head from 'next/head';
-  import Navbar from '../../pages/components/Navbar';
-  import Navbar2 from '../../pages/components/Navbar2';
-  import Sidenavbar from '../../pages/components/Sidenavbar';
-  import Footer from '../../pages/components/Footer';
+  import Navbar from '../../components/Navbar';
+  import Navbar2 from '../../components/Navbar2';
+  import Sidenavbar from '../../components/Sidenavbar';
+  import Footer from '../../components/Footer';
   import { ChevronRight, ChevronLeft } from 'lucide-react';
 
   // Static sidebar data (needs to be available here too)
