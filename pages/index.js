@@ -1,8 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import Head from "next/head";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
-import Navbar2 from "./components/Navbar2";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import Navbar2 from "../components/Navbar2";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 

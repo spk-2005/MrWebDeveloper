@@ -1,13 +1,13 @@
-// Enhanced ItemPage.js - Fixed navigation and content fetching with improvements
+// Enhanced ItemPage.js - Fixed to work with new API structure
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { usePostsContext } from '../components/PostContext';
-import Navbar from '../components/Navbar';
-import Navbar2 from '../components/Navbar2';
-import Sidenavbar from '../components/Sidenavbar';
-import Contentpage from '../components/Contentpage';
-import Footer from '../components/Footer';
+import { usePostsContext, usePost } from '../../components/PostContext'; // Import usePost hook
+import Navbar from '../../components/Navbar';
+import Navbar2 from '../../components/Navbar2';
+import Sidenavbar from '../../components/Sidenavbar';
+import Contentpage from '../../components/Contentpage';
+import Footer from '../../components/Footer';
 import {
   ChevronRight,
   ChevronLeft,
@@ -213,12 +213,11 @@ const useResponsive = () => {
   return screenSize;
 };
 
-// Enhanced routing hook with better post lookup and error handling
-const useRouting = (section, item, router, allPosts) => {
+// FIXED: Simplified routing hook that validates routes but doesn't fetch data
+const useRouting = (section, item, router) => {
   const [routeState, setRouteState] = useState({
     activeSection: null,
     activeItem: null,
-    contentData: null,
     error: null,
     isProcessing: false
   });
@@ -246,47 +245,6 @@ const useRouting = (section, item, router, allPosts) => {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }, []);
-
-  // Enhanced post lookup with comprehensive matching
-  const findPostByLanguageAndHeading = useCallback((language, heading) => {
-    console.log(`🔍 Looking for post: language="${language}", heading="${heading}"`);
-    
-    if (!allPosts || allPosts.length === 0) {
-      console.log('❌ No posts available');
-      return null;
-    }
-
-    const matchingStrategies = [
-      // Strategy 1: Exact match
-      (post) => isStringMatch(post.language, language) && isStringMatch(post.heading, heading),
-      
-      // Strategy 2: Language match with flexible heading match
-      (post) => {
-        const langMatch = isStringMatch(post.language, language);
-        const headingMatch = isStringMatch(post.heading, heading);
-        return langMatch && headingMatch;
-      },
-      
-      // Strategy 3: Partial heading match
-      (post) => {
-        const langMatch = isStringMatch(post.language, language);
-        const headingContains = normalizeString(post.heading).includes(normalizeString(heading)) ||
-                               normalizeString(heading).includes(normalizeString(post.heading));
-        return langMatch && headingContains;
-      }
-    ];
-
-    for (let i = 0; i < matchingStrategies.length; i++) {
-      const found = allPosts.find(matchingStrategies[i]);
-      if (found) {
-        console.log(`✅ Found post using strategy ${i + 1}:`, found.heading);
-        return found;
-      }
-    }
-
-    console.log(`❌ No matching post found for "${heading}" in ${language}`);
-    return null;
-  }, [allPosts]);
 
   useEffect(() => {
     if (!router.isReady) {
@@ -317,26 +275,18 @@ const useRouting = (section, item, router, allPosts) => {
       
       if (isValidItem) {
         const exactItemName = allValidItems.find(validItem => isStringMatch(validItem, itemFromUrl));
-        const post = findPostByLanguageAndHeading(properSectionName, exactItemName || itemFromUrl);
         
+        // FIXED: Just set the route state without fetching data
         setRouteState({
           activeSection: properSectionName,
           activeItem: exactItemName || itemFromUrl,
-          contentData: post,
-          error: post ? null : {
-            type: 'CONTENT_NOT_FOUND',
-            title: 'Content Not Available',
-            message: `The tutorial "${exactItemName || itemFromUrl}" in ${properSectionName} is currently being updated or is not available.`,
-            suggestion: 'Try selecting another lesson from the sidebar or check back later.',
-            canRetry: true
-          },
+          error: null,
           isProcessing: false
         });
       } else {
         setRouteState({
           activeSection: null,
           activeItem: null,
-          contentData: null,
           error: {
             type: 'INVALID_ROUTE',
             title: 'Tutorial Not Found',
@@ -351,7 +301,6 @@ const useRouting = (section, item, router, allPosts) => {
       setRouteState({
         activeSection: null,
         activeItem: null,
-        contentData: null,
         error: {
           type: 'INVALID_ROUTE',
           title: 'Section Not Found',
@@ -362,7 +311,7 @@ const useRouting = (section, item, router, allPosts) => {
         isProcessing: false
       });
     }
-  }, [router.isReady, section, item, router, getSectionFromUrl, getItemFromUrl, findPostByLanguageAndHeading]);
+  }, [router.isReady, section, item, router, getSectionFromUrl, getItemFromUrl]);
 
   return routeState;
 };
@@ -558,12 +507,15 @@ OfflineIndicator.displayName = 'OfflineIndicator';
 export default function ItemPage() {
   const router = useRouter();
   const { section, item } = router.query;
-  const { allPosts, isInitialLoading } = usePostsContext();
+  const { isInitialLoading } = usePostsContext();
   
   // Custom hooks
   const isOnline = useOnlineStatus();
   const { isMobile, isDesktop } = useResponsive();
-  const { activeSection, activeItem, contentData, error, isProcessing } = useRouting(section, item, router, allPosts);
+  const { activeSection, activeItem, error, isProcessing } = useRouting(section, item, router);
+  
+  // FIXED: Use the usePost hook to fetch data instead of doing it in routing
+  const { post: contentData, isLoading: postLoading, found } = usePost(activeSection, activeItem);
   
   // Local state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -602,7 +554,6 @@ export default function ItemPage() {
     return contentData?.id || contentData?._id || null;
   }, [contentData]);
   
-
   // Enhanced SEO data with better fallbacks
   const seoData = useMemo(() => {
     const defaultTitle = 'MrDeveloper - Web Development Tutorials';
@@ -654,12 +605,12 @@ export default function ItemPage() {
     return { title, description, tags, structuredData };
   }, [contentData]);
 
-  // Loading screen
+  // Loading screen - show if context is loading OR routing is processing
   if (isInitialLoading || isProcessing) {
     return <LoadingScreen />;
   }
 
-  // Error screen
+  // Error screen - show routing errors
   if (error) {
     return <ErrorScreen error={error} router={router} />;
   }
