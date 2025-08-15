@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://mrdeveloper.in
+
+# Sitemaps
+Sitemap: https://mrdeveloper.in/sitemap.xml

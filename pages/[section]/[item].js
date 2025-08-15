@@ -1,4 +1,4 @@
-// Updated ItemPage.js - Fixed navigation and content fetching
+// Enhanced ItemPage.js - Fixed navigation and content fetching with improvements
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -18,7 +18,8 @@ import {
   BookOpen,
   Settings,
   Loader2,
-  WifiOff
+  WifiOff,
+  RefreshCw
 } from 'lucide-react';
 
 // Static sidebar data mapping sections to their respective items 
@@ -108,7 +109,7 @@ const SIDEBAR_DATA = {
   ]
 };
 
-// FIXED: Helper function to get all items (including sub-items) from a section
+// Helper function to get all items (including sub-items) from a section
 const getAllItemsFromSection = (sectionData) => {
   const items = [];
   
@@ -118,33 +119,22 @@ const getAllItemsFromSection = (sectionData) => {
   }
   
   sectionData.forEach((item, index) => {
-    console.log(`Processing section item ${index}:`, item);
-    
     if (typeof item === 'string') {
       items.push(item);
-      console.log('Added string item:', item);
     } else if (item && typeof item === 'object' && item.title) {
-      // Add parent item
       items.push(item.title);
-      console.log('Added parent item:', item.title);
-      
-      // Add all sub-items if they exist
       if (Array.isArray(item.subItems)) {
         item.subItems.forEach(subItem => {
           items.push(subItem);
-          console.log('Added sub-item:', subItem);
         });
       }
-    } else {
-      console.warn('Unrecognized item structure at index', index, ':', item);
     }
   });
   
-  console.log('Final items from section:', items);
   return items;
 };
 
-// FIXED: Helper function for case-insensitive and flexible matching
+// Helper function for case-insensitive and flexible matching
 const normalizeString = (str) => {
   if (!str) return '';
   return str.toString().toLowerCase().trim();
@@ -154,15 +144,12 @@ const isStringMatch = (str1, str2) => {
   const normalized1 = normalizeString(str1);
   const normalized2 = normalizeString(str2);
   
-  // Direct match
   if (normalized1 === normalized2) return true;
   
-  // Handle URL slug format (e.g., "div-container" matches "div container")
   const slugified1 = normalized1.replace(/\s+/g, '-');
   const slugified2 = normalized2.replace(/\s+/g, '-');
   if (slugified1 === slugified2) return true;
   
-  // Handle spaces vs hyphens
   const spaced1 = normalized1.replace(/-/g, ' ');
   const spaced2 = normalized2.replace(/-/g, ' ');
   if (spaced1 === spaced2) return true;
@@ -226,7 +213,7 @@ const useResponsive = () => {
   return screenSize;
 };
 
-// FIXED: Enhanced routing hook with better post lookup
+// Enhanced routing hook with better post lookup and error handling
 const useRouting = (section, item, router, allPosts) => {
   const [routeState, setRouteState] = useState({
     activeSection: null,
@@ -236,14 +223,11 @@ const useRouting = (section, item, router, allPosts) => {
     isProcessing: false
   });
 
-  // Helper functions
   const getSectionFromUrl = useCallback((sectionSlug) => {
-    // Direct match
     if (Object.keys(SIDEBAR_DATA).includes(sectionSlug)) {
       return sectionSlug;
     }
     
-    // Case insensitive match
     const normalizedSlug = normalizeString(sectionSlug);
     for (const sectionKey of Object.keys(SIDEBAR_DATA)) {
       if (normalizeString(sectionKey) === normalizedSlug) {
@@ -257,33 +241,21 @@ const useRouting = (section, item, router, allPosts) => {
   const getItemFromUrl = useCallback((itemSlug) => {
     if (!itemSlug) return null;
     
-    // Convert slug back to title format
     return itemSlug
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }, []);
 
-  // FIXED: Enhanced post lookup with flexible matching
+  // Enhanced post lookup with comprehensive matching
   const findPostByLanguageAndHeading = useCallback((language, heading) => {
     console.log(`🔍 Looking for post: language="${language}", heading="${heading}"`);
-    console.log('📊 Available posts:', allPosts.length);
     
     if (!allPosts || allPosts.length === 0) {
       console.log('❌ No posts available');
       return null;
     }
 
-    // Log all HTML posts for debugging
-    const htmlPosts = allPosts.filter(post => 
-      normalizeString(post.language) === normalizeString(language)
-    );
-    console.log(`🌐 ${language} posts found:`, htmlPosts.length);
-    htmlPosts.forEach((post, index) => {
-      console.log(`  ${index + 1}. "${post.heading}" (id: ${post.id})`);
-    });
-
-    // Try multiple matching strategies
     const matchingStrategies = [
       // Strategy 1: Exact match
       (post) => isStringMatch(post.language, language) && isStringMatch(post.heading, heading),
@@ -292,7 +264,6 @@ const useRouting = (section, item, router, allPosts) => {
       (post) => {
         const langMatch = isStringMatch(post.language, language);
         const headingMatch = isStringMatch(post.heading, heading);
-        console.log(`  Checking "${post.heading}": lang=${langMatch}, heading=${headingMatch}`);
         return langMatch && headingMatch;
       },
       
@@ -306,7 +277,6 @@ const useRouting = (section, item, router, allPosts) => {
     ];
 
     for (let i = 0; i < matchingStrategies.length; i++) {
-      console.log(`🎯 Trying matching strategy ${i + 1}...`);
       const found = allPosts.find(matchingStrategies[i]);
       if (found) {
         console.log(`✅ Found post using strategy ${i + 1}:`, found.heading);
@@ -320,16 +290,13 @@ const useRouting = (section, item, router, allPosts) => {
 
   useEffect(() => {
     if (!router.isReady) {
-      console.log('🚫 Router not ready yet');
       return;
     }
 
-    console.log('🔄 Processing route change:', { section, item });
-    setRouteState(prev => ({ ...prev, isProcessing: true }));
+    setRouteState(prev => ({ ...prev, isProcessing: true, error: null }));
 
     // Handle invalid or incomplete URLs
     if (!section || !item) {
-      console.log('⚠️ Incomplete URL, redirecting...');
       if (section && SIDEBAR_DATA[section]) {
         const firstItem = SIDEBAR_DATA[section][0];
         const firstItemName = typeof firstItem === 'string' ? firstItem : firstItem.title;
@@ -344,28 +311,12 @@ const useRouting = (section, item, router, allPosts) => {
     const properSectionName = getSectionFromUrl(section);
     const itemFromUrl = getItemFromUrl(item);
 
-    console.log('🎯 Resolved:', {
-      properSectionName,
-      itemFromUrl,
-      originalSection: section,
-      originalItem: item
-    });
-
     if (properSectionName && SIDEBAR_DATA[properSectionName]) {
-      // Get all valid items (including sub-items) from the section
       const allValidItems = getAllItemsFromSection(SIDEBAR_DATA[properSectionName]);
-      console.log('📝 Valid items for section:', allValidItems);
-      
-      // Check if the item is valid in this section
       const isValidItem = allValidItems.some(validItem => isStringMatch(validItem, itemFromUrl));
-      console.log('🔍 Is valid item?', isValidItem, 'for', itemFromUrl);
       
       if (isValidItem) {
-        // Find the exact matching item name from our sidebar data
         const exactItemName = allValidItems.find(validItem => isStringMatch(validItem, itemFromUrl));
-        console.log('✅ Exact item name:', exactItemName);
-        
-        // Look for post with enhanced matching
         const post = findPostByLanguageAndHeading(properSectionName, exactItemName || itemFromUrl);
         
         setRouteState({
@@ -376,12 +327,12 @@ const useRouting = (section, item, router, allPosts) => {
             type: 'CONTENT_NOT_FOUND',
             title: 'Content Not Available',
             message: `The tutorial "${exactItemName || itemFromUrl}" in ${properSectionName} is currently being updated or is not available.`,
-            suggestion: 'Try selecting another lesson from the sidebar or check back later.'
+            suggestion: 'Try selecting another lesson from the sidebar or check back later.',
+            canRetry: true
           },
           isProcessing: false
         });
       } else {
-        console.log('❌ Invalid item for section');
         setRouteState({
           activeSection: null,
           activeItem: null,
@@ -390,13 +341,13 @@ const useRouting = (section, item, router, allPosts) => {
             type: 'INVALID_ROUTE',
             title: 'Tutorial Not Found',
             message: `The tutorial "${itemFromUrl}" doesn't exist in ${properSectionName} section.`,
-            suggestion: 'Please choose a valid tutorial from our available courses.'
+            suggestion: 'Please choose a valid tutorial from our available courses.',
+            canRetry: false
           },
           isProcessing: false
         });
       }
     } else {
-      console.log('❌ Invalid section');
       setRouteState({
         activeSection: null,
         activeItem: null,
@@ -405,7 +356,8 @@ const useRouting = (section, item, router, allPosts) => {
           type: 'INVALID_ROUTE',
           title: 'Section Not Found',
           message: `The section "${section}" doesn't exist in our curriculum.`,
-          suggestion: 'Please choose a valid section from our available courses.'
+          suggestion: 'Please choose a valid section from our available courses.',
+          canRetry: false
         },
         isProcessing: false
       });
@@ -415,31 +367,56 @@ const useRouting = (section, item, router, allPosts) => {
   return routeState;
 };
 
-// Memoized components
+// Enhanced loading screen with progress indication
 const LoadingScreen = React.memo(() => {
+  const [loadingText, setLoadingText] = useState('Initializing...');
+  
+  useEffect(() => {
+    const messages = [
+      'Initializing...',
+      'Loading curriculum...',
+      'Preparing your lesson...',
+      'Almost ready...'
+    ];
+    
+    let index = 0;
+    const interval = setInterval(() => {
+      setLoadingText(messages[index % messages.length]);
+      index++;
+    }, 800);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center transition-colors duration-300">
-      <div className="text-center space-y-6 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
+      <div className="text-center space-y-8 p-8">
         <div className="relative">
-          <Loader2 className="w-16 h-16 text-blue-600 dark:text-blue-400 animate-spin mx-auto" />
-          <div className="absolute inset-0 w-16 h-16 bg-blue-600 dark:bg-blue-400 rounded-full mx-auto animate-ping opacity-20"></div>
+          <Loader2 className="w-20 h-20 text-blue-600 dark:text-blue-400 animate-spin mx-auto" />
+          <div className="absolute inset-0 w-20 h-20 bg-blue-600 dark:bg-blue-400 rounded-full mx-auto animate-ping opacity-20"></div>
         </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Loading CodeLearn
+        
+        <div className="space-y-4">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+            CodeLearn
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Preparing your learning experience...
+          <p className="text-xl text-gray-600 dark:text-gray-400">
+            {loadingText}
           </p>
         </div>
+        
         <div className="flex justify-center space-x-2">
           {[0, 1, 2].map(i => (
             <div
               key={i}
-              className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-bounce"
-              style={{ animationDelay: `${i * 100}ms` }}
+              className="w-3 h-3 bg-blue-600 dark:bg-blue-400 rounded-full animate-bounce"
+              style={{ animationDelay: `${i * 150}ms` }}
             />
           ))}
+        </div>
+        
+        <div className="w-64 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mx-auto">
+          <div className="h-full bg-gradient-to-r from-blue-500 to-purple-600 animate-pulse rounded-full"></div>
         </div>
       </div>
     </div>
@@ -447,53 +424,78 @@ const LoadingScreen = React.memo(() => {
 });
 LoadingScreen.displayName = 'LoadingScreen';
 
+// Enhanced error screen with better UX
 const ErrorScreen = React.memo(({ error, router }) => {
-  const errorActions = useMemo(() => [
-    {
-      icon: Home,
-      label: 'Go Home',
-      action: () => router.push('/'),
-      variant: 'primary'
-    },
-    {
-      icon: BookOpen,
-      label: 'Start Learning',
-      action: () => router.push('/HTML/prerequisites'),
-      variant: 'secondary'
-    },
-    {
-      icon: Settings,
-      label: 'Retry',
-      action: () => window.location.reload(),
-      variant: 'tertiary'
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleRetry = useCallback(async () => {
+    setIsRetrying(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate retry delay
+      window.location.reload();
+    } catch (err) {
+      console.error('Retry failed:', err);
+    } finally {
+      setIsRetrying(false);
     }
-  ], [router]);
+  }, []);
+
+  const errorActions = useMemo(() => {
+    const baseActions = [
+      {
+        icon: Home,
+        label: 'Go Home',
+        action: () => router.push('/'),
+        variant: 'primary'
+      },
+      {
+        icon: BookOpen,
+        label: 'Start Learning',
+        action: () => router.push('/HTML/prerequisites'),
+        variant: 'secondary'
+      }
+    ];
+
+    if (error.canRetry) {
+      baseActions.push({
+        icon: RefreshCw,
+        label: isRetrying ? 'Retrying...' : 'Retry',
+        action: handleRetry,
+        variant: 'tertiary',
+        disabled: isRetrying
+      });
+    }
+
+    return baseActions;
+  }, [router, error.canRetry, isRetrying, handleRetry]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center p-4 transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 transition-colors duration-300">
       <div className="text-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm p-8 lg:p-12 rounded-3xl shadow-2xl max-w-2xl border border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="relative mb-8">
-          <AlertTriangle className="w-20 h-20 text-red-500 dark:text-red-400 mx-auto" />
-          <div className="absolute inset-0 w-20 h-20 bg-red-500 dark:bg-red-400 rounded-full mx-auto animate-ping opacity-20"></div>
+          <AlertTriangle className="w-24 h-24 text-red-500 dark:text-red-400 mx-auto" />
+          <div className="absolute inset-0 w-24 h-24 bg-red-500 dark:bg-red-400 rounded-full mx-auto animate-ping opacity-20"></div>
         </div>
        
-        <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-6">
           {error.title}
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-4 text-lg leading-relaxed">
+        <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg leading-relaxed">
           {error.message}
         </p>
-        <p className="text-gray-500 dark:text-gray-500 mb-8 text-sm">
+        <p className="text-gray-500 dark:text-gray-500 mb-8 text-base">
           {error.suggestion}
         </p>
        
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {errorActions.map(({ icon: Icon, label, action, variant }) => (
+          {errorActions.map(({ icon: Icon, label, action, variant, disabled }) => (
             <button
               key={label}
               onClick={action}
+              disabled={disabled}
               className={`group flex items-center justify-center space-x-2 px-6 py-4 rounded-xl font-semibold
                         transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105
+                        disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
                         ${variant === 'primary'
                           ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white'
                           : variant === 'secondary'
@@ -501,27 +503,38 @@ const ErrorScreen = React.memo(({ error, router }) => {
                           : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
                         }`}
             >
-              <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              <Icon className={`w-5 h-5 transition-transform ${isRetrying && label.includes('Retrying') ? 'animate-spin' : 'group-hover:scale-110'}`} />
               <span>{label}</span>
             </button>
           ))}
         </div>
+        
+        {error.type === 'CONTENT_NOT_FOUND' && (
+          <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              💡 <strong>Tip:</strong> This lesson might be available soon. Check our sidebar for alternative lessons or try refreshing the page.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
 });
 ErrorScreen.displayName = 'ErrorScreen';
 
+// Enhanced sidebar toggle with better accessibility
 const SidebarToggle = React.memo(({ isSidebarOpen, toggleSidebar }) => {
   return (
     <button
       onClick={toggleSidebar}
-      className={`fixed top-84 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-1 rounded-r-xl shadow-lg
+      className={`fixed top-84 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-2 rounded-r-xl shadow-lg
                   transition-all duration-300 hover:shadow-xl border border-l-0 border-gray-200 dark:border-gray-600
                   text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                   ${isSidebarOpen ? 'left-72 xl:left-80' : 'left-0'}
                   md:block`}
       aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+      title={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
     >
       {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
     </button>
@@ -529,10 +542,23 @@ const SidebarToggle = React.memo(({ isSidebarOpen, toggleSidebar }) => {
 });
 SidebarToggle.displayName = 'SidebarToggle';
 
+// Offline indicator component
+const OfflineIndicator = React.memo(({ isOnline }) => {
+  if (isOnline) return null;
+  
+  return (
+    <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2">
+      <WifiOff className="w-4 h-4" />
+      <span className="text-sm font-medium">You&apos;re offline</span>
+    </div>
+  );
+});
+OfflineIndicator.displayName = 'OfflineIndicator';
+
 export default function ItemPage() {
   const router = useRouter();
   const { section, item } = router.query;
-  const { allPosts, isInitialLoading } = usePostsContext(); // CHANGED: Use allPosts instead of getPost
+  const { allPosts, isInitialLoading } = usePostsContext();
   
   // Custom hooks
   const isOnline = useOnlineStatus();
@@ -544,22 +570,10 @@ export default function ItemPage() {
 
   // Effects
   useEffect(() => {
-    // Always show sidebar on desktop by default
     if (isDesktop) {
       setIsSidebarOpen(true);
     }
   }, [isDesktop]);
-
-  // Log posts for debugging
-  useEffect(() => {
-    console.log('📊 Total posts in context:', allPosts?.length || 0);
-    if (allPosts && allPosts.length > 0) {
-      console.log('🔍 Sample posts:');
-      allPosts.slice(0, 5).forEach((post, index) => {
-        console.log(`  ${index + 1}. ${post.language} - "${post.heading}"`);
-      });
-    }
-  }, [allPosts]);
 
   // Memoized handlers
   const handleSetActiveSection = useCallback((newSection) => {
@@ -583,49 +597,61 @@ export default function ItemPage() {
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
   const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
 
+  // FIXED: Properly extract Post_Id from contentData
+  const postId = useMemo(() => {
+    return contentData?.id || contentData?._id || null;
+  }, [contentData]);
+  
+
+  // Enhanced SEO data with better fallbacks
   const seoData = useMemo(() => {
-    // Use fallback data if contentData is not available
     const defaultTitle = 'MrDeveloper - Web Development Tutorials';
     const defaultDescription = 'Master web development with comprehensive tutorials covering HTML, CSS, JavaScript, and Tailwind CSS.';
-    const defaultStructuredData = {
-      "@context": "https://schema.org",
-      "@type": "LearningResource",
-      "name": 'CodeLearn Tutorials',
-      "description": defaultDescription,
-      "educationalLevel": "Beginner to Intermediate",
-      "learningResourceType": "Tutorial",
-      "provider": {
-        "@type": "Organization",
-        "name": "CodeLearn"
-      }
-    };
-
+    
     if (!contentData) {
       return {
         title: defaultTitle,
         description: defaultDescription,
-        structuredData: defaultStructuredData,
+        structuredData: {
+          "@context": "https://schema.org",
+          "@type": "LearningResource",
+          "name": 'CodeLearn Tutorials',
+          "description": defaultDescription,
+          "educationalLevel": "Beginner to Intermediate",
+          "learningResourceType": "Tutorial",
+          "provider": {
+            "@type": "Organization",
+            "name": "CodeLearn"
+          }
+        },
         tags: []
       };
     }
     
-    // Dynamically fetch title, description, and tags from contentData
     const title = contentData.title || `${contentData.heading} - ${contentData.language} Tutorial | MrDeveloper`;
     const description = contentData.description || `Learn ${contentData.heading} in ${contentData.language} with detailed examples, practical exercises, and step-by-step explanations.`;
-    const tags = contentData.tags || [];
+    const tags = contentData.tags || [contentData.language, contentData.heading, 'tutorial', 'web development'];
 
     const structuredData = {
-      ...defaultStructuredData,
+      "@context": "https://schema.org",
+      "@type": "LearningResource",
       "name": title,
-      "description": description
+      "description": description,
+      "educationalLevel": "Beginner to Intermediate",
+      "learningResourceType": "Tutorial",
+      "about": {
+        "@type": "Thing",
+        "name": `${contentData.language} - ${contentData.heading}`
+      },
+      "provider": {
+        "@type": "Organization",
+        "name": "CodeLearn"
+      },
+      "dateCreated": contentData.createdAt || new Date().toISOString(),
+      "dateModified": contentData.updatedAt || new Date().toISOString()
     };
 
-    return {
-      title,
-      description,
-      tags, // Now includes tags from the database
-      structuredData
-    };
+    return { title, description, tags, structuredData };
   }, [contentData]);
 
   // Loading screen
@@ -643,31 +669,40 @@ export default function ItemPage() {
       <Head>
         <title>{seoData.title}</title>
         <meta name="description" content={seoData.description} />
-        {/* Add meta keywords using tags */}
         {seoData.tags && seoData.tags.length > 0 && (
           <meta name="keywords" content={seoData.tags.join(', ')} />
         )}
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="theme-color" content="#ffffff" />
         
+        {/* Open Graph tags */}
         <meta property="og:title" content={seoData.title} />
         <meta property="og:description" content={seoData.description} />
         <meta property="og:type" content="article" />
         <meta property="og:site_name" content="CodeLearn" />
         
+        {/* Twitter Card tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={seoData.title} />
         <meta name="twitter:description" content={seoData.description} />
         
+        {/* Structured data */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(seoData.structuredData) }}
         />
+        
+        {/* Preconnect for performance */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       </Head>
       
       <div style={{backgroundColor:"#f5fdff66"}} className="min-h-screen flex flex-col transition-colors duration-300">
+        {/* Offline Indicator */}
+        <OfflineIndicator isOnline={isOnline} />
+        
         {/* Navigation */}
-        <div className="sticky top-0 z-50">
+        <div className="sticky top-0 z-40">
           <Navbar />
           <Navbar2
             activeSection={activeSection}
@@ -676,14 +711,15 @@ export default function ItemPage() {
           />
         </div>
 
+        {/* Sidebar Toggle */}
         <SidebarToggle
           isSidebarOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
         />
 
-        {/* Main Layout - Sidebar and Content Side by Side */}
+        {/* Main Layout */}
         <div className="flex flex-1 relative">
-          {/* Left Sidebar - Only render when open on desktop, always render on mobile for overlay */}
+          {/* Sidebar */}
           {(isSidebarOpen || isMobile) && (
             <Sidenavbar
               activeSection={activeSection}
@@ -694,17 +730,18 @@ export default function ItemPage() {
             />
           )}
 
-          {/* Main Content Area - Full width when sidebar closed */}
+          {/* Main Content */}
           <div className="flex-1 min-w-0 overflow-auto">
-            <main className="">
+            <main>
               <Contentpage
-                key={`${activeSection}-${activeItem}`}
+                key={`${activeSection}-${activeItem}-${postId}`} // Include postId in key for better re-renders
                 activeSection={activeSection}
                 activeItem={activeItem}
                 setActiveItem={handleSetActiveItem}
                 setActiveSection={handleSetActiveSection}
                 contentData={contentData}
                 isLoading={false}
+                Post_Id={postId} // FIXED: Use properly extracted postId
               />
             </main>
           </div>

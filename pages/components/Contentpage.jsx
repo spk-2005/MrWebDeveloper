@@ -15,6 +15,7 @@ import {
   MessageCircle,
   ChevronLeft
 } from 'lucide-react';
+import Feedback from './Feedback';
 
 // Enhanced ShareModal component with attractive content
 const ShareModal = ({ title, activeSection, activeItem, onClose }) => {
@@ -437,7 +438,8 @@ export default function Contentpage({
   setActiveItem, 
   setActiveSection,
   contentData,
-  isLoading 
+  isLoading,
+  Post_Id
 }) {
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
@@ -1071,6 +1073,11 @@ export default function Contentpage({
               </div>
             </div>
           </div>
+          <Feedback
+          activeSection={activeSection}
+          activeItem={activeItem}
+          postId={Post_Id}
+          />
         </div>
       </div>
     </div>
