@@ -4,10 +4,25 @@ import { Html, Head, Main, NextScript } from 'next/document';
 export default function Document() {
   return (
     <Html lang="en">
-      <Head >
+      <Head>
+        {/* Google Analytics */}
+        <script
+          async
+          src={`https://www.googletagmanager.com/gtag/js?id=G-1W96RC0DLJ`}
+        ></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
 
-                <meta name="google-adsense-account" content="ca-pub-4966899358935665"></meta>
-              <meta name="google-site-verification" content="MoeiZ7kQur1i2YnchsT8JJCrNgmmGYqlvcIIXT_CCAE" />
+              gtag('config', 'G-1W96RC0DLJ', {
+                page_path: window.location.pathname,
+              });
+            `,
+          }}
+        />
       </Head>
       <body>
         <Main />

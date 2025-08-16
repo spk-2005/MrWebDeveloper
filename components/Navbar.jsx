@@ -57,7 +57,7 @@ export default function Navbar() {
               width={128}
               height={99}
               alt="MrDeveloper Logo"
-              className="w-11 h-11 sm:w-20 sm:h-11 rounded-xl transition-all duration-300"
+              className=" sm:w-20 sm:h-11 rounded-xl transition-all duration-300"
               priority
             />
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
