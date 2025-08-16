@@ -8,8 +8,8 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  const navlists = ['Home', 'How To Learn', 'Practice Field'];
-  const navLinks = ['/', '/howtolearn', '/Practicefield'];
+  const navlists = ['Home', 'How To Learn', 'Our Aim'];
+  const navLinks = ['/', '/howtolearn', '/Ouraim'];
 
   useEffect(() => {
     setMounted(true);
