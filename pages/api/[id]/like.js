@@ -1,8 +1,18 @@
-// pages/api/likes/[id]/like.js
-import dbConnect from "../../api/lib/mongodb"; // Adjust path based on your project structure
-import Post from "../../api/lib/models/post";
+// pages/api/[id]/like.js
+import dbConnect from "../lib/mongodb"; // Adjust path based on your project structure
+import Post from "../lib/models/post"; // Adjust path based on your project structure
 
 export default async function handler(req, res) {
+  // Enable CORS for faster requests
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   // Only allow POST and GET methods
   if (!['POST', 'GET'].includes(req.method)) {
     res.setHeader('Allow', ['POST', 'GET']);
@@ -27,7 +37,7 @@ export default async function handler(req, res) {
 
     switch (req.method) {
       case 'POST':
-        const { action } = req.body;
+        const { action, timestamp } = req.body;
         
         // Validate action
         if (!['like', 'unlike'].includes(action)) {
@@ -42,7 +52,10 @@ export default async function handler(req, res) {
         
         const updatedPost = await Post.findByIdAndUpdate(
           id,
-          { $inc: { likes: increment } },
+          { 
+            $inc: { likes: increment },
+            $set: { lastLiked: new Date() }
+          },
           { new: true, runValidators: true }
         );
 
@@ -59,14 +72,17 @@ export default async function handler(req, res) {
           updatedPost.likes = 0;
         }
 
+        // Fast response - include timestamp for client-side verification
         return res.status(200).json({ 
           success: true, 
           likes: updatedPost.likes,
-          action: action
+          action: action,
+          timestamp: Date.now(),
+          postId: id
         });
 
       case 'GET':
-        const post = await Post.findById(id).select('likes');
+        const post = await Post.findById(id).select('likes lastLiked');
         
         if (!post) {
           return res.status(404).json({ 
@@ -77,7 +93,8 @@ export default async function handler(req, res) {
 
         return res.status(200).json({ 
           success: true, 
-          likes: post.likes || 0 
+          likes: post.likes || 0,
+          lastLiked: post.lastLiked
         });
 
       default:
@@ -94,6 +111,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ 
         success: false, 
         error: 'Invalid post ID format' 
+      });
+    }
+
+    if (error.name === 'MongoTimeoutError') {
+      return res.status(408).json({ 
+        success: false, 
+        error: 'Database timeout - please try again' 
       });
     }
 
