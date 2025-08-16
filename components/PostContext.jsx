@@ -1,4 +1,4 @@
-// components/PostContext.jsx - Optimized with request deduplication
+// components/PostContext.jsx - Optimized with proper request deduplication and caching
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 const PostsContext = createContext();
@@ -12,156 +12,185 @@ export const usePostsContext = () => {
 };
 
 export const PostsProvider = ({ children }) => {
-  const [languagePosts, setLanguagePosts] = useState({});
-  const [individualPosts, setIndividualPosts] = useState({});
+  // Core state
+  const [posts, setPosts] = useState(new Map()); // Use Map for O(1) lookups
   const [metadataCache, setMetadataCache] = useState([]);
-  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Request deduplication maps
-  const pendingRequests = useRef(new Map());
-  const lastRequestTime = useRef(new Map());
+  // Request management
+  const activeRequests = useRef(new Map());
+  const requestCache = useRef(new Map());
+  const retryAttempts = useRef(new Map());
 
-  // Debounce duplicate requests (prevent double fetching)
-  const dedupDelay = 100; // ms
+  // Constants
+  const MAX_RETRIES = 2;
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  const REQUEST_TIMEOUT = 10000; // 10 seconds
 
-  // Enhanced request deduplication
-  const createRequest = useCallback(async (key, requestFn, ttl = 5000) => {
-    const now = Date.now();
-    const lastTime = lastRequestTime.current.get(key);
-    
-    // If there's a recent request, wait a bit
-    if (lastTime && (now - lastTime) < dedupDelay) {
-      await new Promise(resolve => setTimeout(resolve, dedupDelay));
-    }
-
-    // Check if request is already pending
-    if (pendingRequests.current.has(key)) {
-      console.log(`🔄 Deduplicating request: ${key}`);
-      return pendingRequests.current.get(key);
-    }
-
-    // Create new request
-    console.log(`🚀 New request: ${key}`);
-    lastRequestTime.current.set(key, now);
-    
-    const requestPromise = requestFn().finally(() => {
-      // Clean up after request completes
-      pendingRequests.current.delete(key);
-      setTimeout(() => {
-        lastRequestTime.current.delete(key);
-      }, ttl);
-    });
-
-    pendingRequests.current.set(key, requestPromise);
-    return requestPromise;
+  // Create unique cache key
+  const getCacheKey = useCallback((language, heading) => {
+    if (!language || !heading) return null;
+    return `${language.toLowerCase()}_${heading.toLowerCase().replace(/\s+/g, '_')}`;
   }, []);
 
-
-  // Optimized specific post loading with deduplication
-// Fixed loadSpecificPost for nested route structure [language]/[heading].js
-const loadSpecificPost = useCallback(async (language, heading) => {
-  try {
-    // Encode URL parameters to handle special characters
-    const encodedLanguage = encodeURIComponent(language);
-    const encodedHeading = encodeURIComponent(heading);
+  // Enhanced request deduplication with timeout and retry logic
+  const makeRequest = useCallback(async (url, cacheKey, options = {}) => {
+    const { timeout = REQUEST_TIMEOUT, maxRetries = MAX_RETRIES } = options;
     
-    console.log(`🔍 Loading specific post: ${language}/${heading}`);
-    
-    // URL structure matches: /api/posts/specific/[language]/[heading]
-    const response = await fetch(
-      `/api/posts/specific/${encodedLanguage}/${encodedHeading}`
-    );
-
-    if (!response.ok) {
-      // More detailed error information
-      const errorText = await response.text();
-      console.error(`API Error ${response.status}:`, errorText);
-      
-      throw new Error(
-        `Failed to load post: ${response.status} ${response.statusText}${
-          errorText ? ` - ${errorText}` : ''
-        }`
-      );
+    // Check if request is already in progress
+    if (activeRequests.current.has(cacheKey)) {
+      console.log(`🔄 Deduplicating request for: ${cacheKey}`);
+      return activeRequests.current.get(cacheKey);
     }
 
-    const data = await response.json();
-    
-    // Cache the loaded post
-    const cacheKey = `${language}-${heading}`;
-    setIndividualPosts(prev => ({
-      ...prev,
-      [cacheKey]: data.post || data // Handle both response formats
-    }));
-    
-    console.log(`✅ Loaded specific post: ${language}/${heading}`);
-    return data.post || data; // Handle both response formats
-    
-  } catch (error) {
-    console.error("Error loading specific post:", error);
-    setError(`Failed to load post: ${error.message}`);
-    throw error;
-  }
-}, []);
-
-
-  // Smart getPost with fallback strategies
-  const getPost = useCallback(async (language, heading) => {
-    if (!language || !heading) {
-      console.warn('Missing language or heading for getPost');
-      return null;
+    // Check cache first
+    const cachedEntry = requestCache.current.get(cacheKey);
+    if (cachedEntry && (Date.now() - cachedEntry.timestamp) < CACHE_TTL) {
+      console.log(`⚡ Cache HIT for: ${cacheKey}`);
+      return cachedEntry.data;
     }
 
-    try {
-      const cacheKey = `${language}-${heading}`;
+    // Create new request with timeout and retry logic
+    const requestPromise = (async () => {
+      let lastError = null;
+      const currentRetries = retryAttempts.current.get(cacheKey) || 0;
 
-      // Strategy 1: Check individual cache first
-      if (individualPosts[cacheKey]) {
-        return individualPosts[cacheKey];
-      }
+      for (let attempt = 0; attempt <= Math.min(currentRetries + maxRetries, MAX_RETRIES); attempt++) {
+        try {
+          console.log(`🚀 Request attempt ${attempt + 1} for: ${cacheKey}`);
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-      // Strategy 2: Check language cache for lightweight version
-      const languageCache = languagePosts[language];
-      if (languageCache) {
-        const found = languageCache.find(post => 
-          post.heading?.toLowerCase() === heading.toLowerCase()
-        );
-        
-        if (found) {
-          // If found but doesn't have full content, load full version
-          if (!found.code) {
-            return await loadSpecificPost(language, heading);
+          const response = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+              'Accept': 'application/json',
+              'Cache-Control': 'no-cache',
+            },
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
           }
-          return found;
+
+          const data = await response.json();
+          
+          if (!data.success) {
+            throw new Error(data.message || 'API request failed');
+          }
+
+          // Cache successful response
+          requestCache.current.set(cacheKey, {
+            data: data.post,
+            timestamp: Date.now(),
+          });
+
+          // Reset retry count on success
+          retryAttempts.current.delete(cacheKey);
+          
+          console.log(`✅ Request successful for: ${cacheKey}`);
+          return data.post;
+
+        } catch (error) {
+          lastError = error;
+          console.warn(`⚠️ Request attempt ${attempt + 1} failed for ${cacheKey}:`, error.message);
+          
+          if (attempt < maxRetries && !error.name === 'AbortError') {
+            // Exponential backoff: 500ms, 1s, 2s
+            const delay = Math.min(500 * Math.pow(2, attempt), 2000);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
         }
       }
 
-      // Strategy 3: Load specific post from API
-      return await loadSpecificPost(language, heading);
+      // Update retry count
+      retryAttempts.current.set(cacheKey, currentRetries + 1);
+      throw lastError;
+    })();
 
-    } catch (err) {
-      console.error(`Error in getPost(${language}, ${heading}):`, err);
-      return null;
+    // Store active request
+    activeRequests.current.set(cacheKey, requestPromise);
+
+    // Clean up after completion
+    requestPromise.finally(() => {
+      activeRequests.current.delete(cacheKey);
+    });
+
+    return requestPromise;
+  }, []);
+
+  // Optimized post loading with proper error handling
+  const loadSpecificPost = useCallback(async (language, heading) => {
+    if (!language || !heading) {
+      throw new Error('Language and heading are required');
     }
-  }, [individualPosts, languagePosts, loadSpecificPost]);
 
-  // Optimized language posts getter
-  const getPostsByLanguage = useCallback(async (language) => {
-    if (!language) return [];
+    const cacheKey = getCacheKey(language, heading);
+    if (!cacheKey) {
+      throw new Error('Invalid language or heading parameters');
+    }
+
+    // Check in-memory cache first
+    if (posts.has(cacheKey)) {
+      console.log(`💾 Memory cache HIT for: ${cacheKey}`);
+      return posts.get(cacheKey);
+    }
 
     try {
-      if (languagePosts[language]) {
-        return languagePosts[language];
+      const encodedLanguage = encodeURIComponent(language);
+      const encodedHeading = encodeURIComponent(heading);
+      const url = `/api/posts/specific/${encodedLanguage}/${encodedHeading}`;
+
+      const post = await makeRequest(url, cacheKey);
+
+      if (post) {
+        // Store in state using functional update to avoid stale closures
+        setPosts(prev => new Map(prev).set(cacheKey, post));
+        
+        console.log(`✅ Post loaded and cached: ${language}/${heading}`);
+        return post;
+      } else {
+        throw new Error('No post data received');
       }
 
-      return await loadLanguagePosts(language);
-    } catch (err) {
-      console.error(`Error in getPostsByLanguage(${language}):`, err);
-      return [];
+    } catch (error) {
+      console.error(`❌ Failed to load post ${language}/${heading}:`, error.message);
+      setError(`Failed to load "${heading}": ${error.message}`);
+      throw error;
     }
-  }, [languagePosts]);
+  }, [posts, getCacheKey, makeRequest]);
 
-  // Enhanced search with caching
+  // Enhanced getPost with better caching strategy
+  const getPost = useCallback(async (language, heading) => {
+    if (!language || !heading) {
+      console.warn('Missing parameters for getPost');
+      return null;
+    }
+
+    const cacheKey = getCacheKey(language, heading);
+    if (!cacheKey) return null;
+
+    try {
+      // First check memory cache
+      if (posts.has(cacheKey)) {
+        return posts.get(cacheKey);
+      }
+
+      // If not in memory, load it
+      return await loadSpecificPost(language, heading);
+
+    } catch (error) {
+      console.error(`Error in getPost(${language}, ${heading}):`, error.message);
+      return null;
+    }
+  }, [posts, getCacheKey, loadSpecificPost]);
+
+  // Optimized search with better performance
   const searchPosts = useCallback((query, options = {}) => {
     if (!query?.trim()) return [];
 
@@ -173,66 +202,83 @@ const loadSpecificPost = useCallback(async (language, heading) => {
         return false;
       }
 
-      return post.heading?.toLowerCase().includes(searchTerm) ||
-             post.description?.toLowerCase().includes(searchTerm) ||
-             post.tags?.some(tag => tag.toLowerCase().includes(searchTerm));
+      return (
+        post.heading?.toLowerCase().includes(searchTerm) ||
+        post.description?.toLowerCase().includes(searchTerm) ||
+        post.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
+      );
     });
 
     return results.slice(0, limit);
   }, [metadataCache]);
 
-  // Optimized like update with cache sync
-  const updatePostLikes = useCallback(async (postId, newCount) => {
+  // Optimized like update with optimistic updates
+  const updatePostLikes = useCallback(async (postId, action) => {
+    if (!postId || !action) return false;
+
+    const increment = action === 'like' ? 1 : -1;
+
     try {
-      // Optimistic update
-      const updateFn = (post) => 
-        post.id === postId ? { ...post, likes: Math.max(0, newCount) } : post;
-
-      // Update all caches
-      setMetadataCache(prev => prev.map(updateFn));
-      
-      setLanguagePosts(prev => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach(lang => {
-          updated[lang] = updated[lang].map(updateFn);
-        });
-        return updated;
-      });
-
-      setIndividualPosts(prev => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach(key => {
-          if (updated[key].id === postId) {
-            updated[key] = { ...updated[key], likes: Math.max(0, newCount) };
+      // Optimistic update - update UI immediately
+      setPosts(prev => {
+        const updated = new Map(prev);
+        for (const [key, post] of updated) {
+          if (post.id === postId) {
+            updated.set(key, {
+              ...post,
+              likes: Math.max(0, (post.likes || 0) + increment)
+            });
+            break;
           }
-        });
+        }
         return updated;
       });
 
-      console.log(`✅ Updated likes for post ${postId}: ${newCount}`);
-    } catch (err) {
-      console.error('Error updating post likes:', err);
+      // Update metadata cache
+      setMetadataCache(prev => prev.map(post => 
+        post.id === postId 
+          ? { ...post, likes: Math.max(0, (post.likes || 0) + increment) }
+          : post
+      ));
+
+      console.log(`✅ Optimistic like update for post ${postId}`);
+      return true;
+
+    } catch (error) {
+      console.error('Error updating post likes:', error);
+      return false;
     }
   }, []);
 
-  // Available languages
+  // Clear cache and reset state
+  const clearCache = useCallback(() => {
+    setPosts(new Map());
+    setMetadataCache([]);
+    setError(null);
+    
+    // Clear all caches and requests
+    activeRequests.current.clear();
+    requestCache.current.clear();
+    retryAttempts.current.clear();
+    
+    console.log('🧹 All caches cleared');
+  }, []);
+
+  // Available languages from metadata
   const availableLanguages = useMemo(() => {
     return [...new Set(metadataCache.map(post => post.language))].filter(Boolean);
   }, [metadataCache]);
 
-  // Clear cache and pending requests
-  const clearCache = useCallback(() => {
-    setLanguagePosts({});
-    setIndividualPosts({});
-    setMetadataCache([]);
-    setError(null);
-    
-    // Clear pending requests
-    pendingRequests.current.clear();
-    lastRequestTime.current.clear();
-    
-    console.log('🧹 Cache cleared');
-  }, []);
+  // Initialize loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isInitialLoading) {
+        setIsInitialLoading(false);
+      }
+    }, 100); // Quick initialization
+
+    return () => clearTimeout(timer);
+  }, [isInitialLoading]);
 
   // Context value with performance monitoring
   const contextValue = useMemo(() => ({
@@ -247,7 +293,6 @@ const loadSpecificPost = useCallback(async (language, heading) => {
 
     // Async Actions
     getPost,
-    getPostsByLanguage,
     loadSpecificPost,
 
     // Sync Actions
@@ -257,12 +302,13 @@ const loadSpecificPost = useCallback(async (language, heading) => {
 
     // Status & Stats
     isEmpty: !isInitialLoading && metadataCache.length === 0,
-    isHealthy: !error && metadataCache.length > 0,
+    isHealthy: !error,
     cacheStats: {
-      metadata: metadataCache.length,
-      languageCaches: Object.keys(languagePosts).length,
-      individualPosts: Object.keys(individualPosts).length,
-      pendingRequests: pendingRequests.current.size
+      inMemoryPosts: posts.size,
+      metadataCount: metadataCache.length,
+      activeRequests: activeRequests.current.size,
+      cachedRequests: requestCache.current.size,
+      retryAttempts: retryAttempts.current.size,
     }
   }), [
     metadataCache,
@@ -270,13 +316,11 @@ const loadSpecificPost = useCallback(async (language, heading) => {
     isInitialLoading,
     error,
     getPost,
-    getPostsByLanguage,
     loadSpecificPost,
     searchPosts,
     updatePostLikes,
     clearCache,
-    languagePosts,
-    individualPosts
+    posts.size
   ]);
 
   return (
@@ -286,112 +330,76 @@ const loadSpecificPost = useCallback(async (language, heading) => {
   );
 };
 
-// Optimized hook with better loading states
+// Optimized usePost hook with better loading states
 export const usePost = (language, heading) => {
   const { getPost, isInitialLoading, error } = usePostsContext();
   const [post, setPost] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [lastFetched, setLastFetched] = useState(null);
-
-  // Prevent duplicate requests with same parameters
-  const requestKey = useMemo(() => 
-    language && heading ? `${language}-${heading}` : null, 
-    [language, heading]
-  );
+  const [loadError, setLoadError] = useState(null);
+  
+  // Prevent re-fetching same post
+  const currentRequest = useRef(null);
+  const lastRequestKey = useRef(null);
 
   useEffect(() => {
-    if (!requestKey) return;
+    if (!language || !heading) {
+      setPost(null);
+      setLoadError(null);
+      return;
+    }
+
+    const requestKey = `${language}-${heading}`;
     
     // Prevent duplicate requests
-    if (lastFetched === requestKey) return;
+    if (lastRequestKey.current === requestKey) {
+      return;
+    }
 
-    let cancelled = false;
+    lastRequestKey.current = requestKey;
+    setIsLoading(true);
+    setLoadError(null);
 
-    const fetchPost = async () => {
-      if (cancelled) return;
-      
-      setIsLoading(true);
-      try {
-        const result = await getPost(language, heading);
-        if (!cancelled) {
+    // Cancel previous request if exists
+    if (currentRequest.current) {
+      currentRequest.current.cancelled = true;
+    }
+
+    const request = { cancelled: false };
+    currentRequest.current = request;
+
+    getPost(language, heading)
+      .then(result => {
+        if (!request.cancelled) {
           setPost(result);
-          setLastFetched(requestKey);
+          setLoadError(result ? null : new Error('Post not found'));
         }
-      } catch (err) {
-        if (!cancelled) {
+      })
+      .catch(err => {
+        if (!request.cancelled) {
           console.error('Error in usePost:', err);
           setPost(null);
+          setLoadError(err);
         }
-      } finally {
-        if (!cancelled) {
+      })
+      .finally(() => {
+        if (!request.cancelled) {
           setIsLoading(false);
         }
-      }
-    };
-
-    fetchPost();
+      });
 
     return () => {
-      cancelled = true;
+      if (currentRequest.current) {
+        currentRequest.current.cancelled = true;
+      }
     };
-  }, [requestKey, language, heading, getPost, lastFetched]);
+  }, [language, heading, getPost]);
 
   return {
     post,
     isLoading: isLoading || isInitialLoading,
-    error,
-    found: !!post,
-    lastFetched
-  };
-};
-
-// Other hooks remain similar but with better error handling
-export const useLanguagePosts = (language) => {
-  const { getPostsByLanguage, isInitialLoading, error } = usePostsContext();
-  const [posts, setPosts] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastFetched, setLastFetched] = useState(null);
-
-  useEffect(() => {
-    if (!language || lastFetched === language) return;
-
-    let cancelled = false;
-
-    const fetchPosts = async () => {
-      if (cancelled) return;
-      
-      setIsLoading(true);
-      try {
-        const result = await getPostsByLanguage(language);
-        if (!cancelled) {
-          setPosts(result || []);
-          setLastFetched(language);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error('Error in useLanguagePosts:', err);
-          setPosts([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchPosts();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [language, getPostsByLanguage, lastFetched]);
-
-  return {
-    posts,
-    count: posts.length,
-    isLoading: isLoading || isInitialLoading,
-    error,
-    isEmpty: posts.length === 0 && !isLoading
+    error: loadError || error,
+    found: !!post && !loadError,
+    isReady: !isLoading && !isInitialLoading,
   };
 };
 

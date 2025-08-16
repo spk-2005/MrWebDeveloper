@@ -1,176 +1,224 @@
-// lib/redis.js - Enhanced Redis client with better debugging
+// lib/redis.js - Optimized Redis with connection pooling and fallbacks
 import Redis from 'ioredis';
 
-let redis = null;
-let redisConnected = false;
-let connectionAttempts = 0;
-const maxConnectionAttempts = 3;
-
-const getRedisClient = () => {
-  if (!redis && connectionAttempts < maxConnectionAttempts) {
-    connectionAttempts++;
-    console.log(`🔄 Attempting Redis connection (attempt ${connectionAttempts}/${maxConnectionAttempts})`);
+class RedisManager {
+  constructor() {
+    this.redis = null;
+    this.isConnected = false;
+    this.connectionAttempts = 0;
+    this.maxConnectionAttempts = 3;
+    this.reconnectTimer = null;
     
+    // Connection stats
+    this.stats = {
+      hits: 0,
+      misses: 0,
+      errors: 0,
+      operations: 0
+    };
+    
+    this.initializeConnection();
+  }
+
+  initializeConnection() {
+    if (this.connectionAttempts >= this.maxConnectionAttempts) {
+      console.warn('⚠️ Redis max connection attempts reached, using fallback mode');
+      return;
+    }
+
+    this.connectionAttempts++;
+    console.log(`🔄 Redis connection attempt ${this.connectionAttempts}/${this.maxConnectionAttempts}`);
+
     try {
-      redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+      this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
         retryDelayOnFailover: 100,
-        maxRetriesPerRequest: 3,
+        maxRetriesPerRequest: 2, // Reduced from 3
         lazyConnect: true,
         keepAlive: 30000,
         family: 4,
         keyPrefix: 'tutorial_app:',
-        connectTimeout: 10000,
-        commandTimeout: 5000,
+        connectTimeout: 5000, // Reduced from 10000
+        commandTimeout: 3000, // Reduced from 5000
+        enableReadyCheck: true,
+        showFriendlyErrorStack: process.env.NODE_ENV === 'development',
+        
+        // Connection pool settings
+        maxRetriesPerRequest: 2,
+        retryDelayOnFailover: 50,
+        enableOfflineQueue: false, // Don't queue commands when offline
+        
+        // Performance settings
+        dropBufferSupport: true,
+        enableAutoPipelining: true,
       });
 
-      redis.on('error', (err) => {
-        console.error('❌ Redis connection error:', err.message);
-        redisConnected = false;
-      });
-
-      redis.on('connect', () => {
-        console.log('🔄 Redis connecting...');
-      });
-
-      redis.on('ready', () => {
-        console.log('✅ Redis connected and ready');
-        redisConnected = true;
-        connectionAttempts = 0; // Reset on successful connection
-      });
-
-      redis.on('close', () => {
-        console.warn('⚠️ Redis connection closed');
-        redisConnected = false;
-      });
-
-      redis.on('reconnecting', () => {
-        console.log('🔄 Redis reconnecting...');
-        redisConnected = false;
+      this.setupEventHandlers();
+      
+      // Attempt to connect immediately
+      this.redis.connect().catch(err => {
+        console.error('❌ Initial Redis connection failed:', err.message);
       });
 
     } catch (error) {
-      console.error('❌ Failed to create Redis client:', error.message);
-      redis = null;
-      redisConnected = false;
+      console.error('❌ Redis client creation failed:', error.message);
+      this.handleConnectionFailure();
     }
   }
-  
-  return redis;
-};
 
-// Check if Redis is available
-const isRedisAvailable = () => {
-  return redis && redisConnected && redis.status === 'ready';
-};
+  setupEventHandlers() {
+    this.redis.on('error', (err) => {
+      console.error('❌ Redis error:', err.message);
+      this.isConnected = false;
+      this.stats.errors++;
+      this.scheduleReconnect();
+    });
 
-// Graceful fallback function
-const withRedisOrFallback = async (operation, fallback = null) => {
-  if (!isRedisAvailable()) {
-    console.warn('⚠️ Redis not available, using fallback');
-    return fallback;
-  }
-  
-  try {
-    return await operation();
-  } catch (error) {
-    console.error('❌ Redis operation failed:', error.message);
-    return fallback;
-  }
-};
+    this.redis.on('connect', () => {
+      console.log('🔄 Redis connecting...');
+      this.isConnected = false;
+    });
 
-// Enhanced cache utility functions
-export const cache = {
-  // Cache keys with better normalization
-  keys: {
-    post: (language, heading) => {
-      const normalizedHeading = heading
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9-]/g, ''); // Remove special characters
-      return `post:${language.toLowerCase()}:${normalizedHeading}`;
-    },
-    languagePosts: (language) => `language:${language.toLowerCase()}:posts`,
-    metadata: 'metadata:all',
-    likes: (postId) => `likes:${postId}`,
-    views: (postId) => `views:${postId}`,
-  },
-
-  // Get data from cache with fallback
-  async get(key) {
-    return withRedisOrFallback(async () => {
-      const client = getRedisClient();
-      console.log(`🔍 Cache GET: ${key}`);
+    this.redis.on('ready', () => {
+      console.log('✅ Redis connected and ready');
+      this.isConnected = true;
+      this.connectionAttempts = 0; // Reset on successful connection
       
-      const data = await client.get(key);
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+    });
+
+    this.redis.on('close', () => {
+      console.warn('⚠️ Redis connection closed');
+      this.isConnected = false;
+      this.scheduleReconnect();
+    });
+
+    this.redis.on('reconnecting', () => {
+      console.log('🔄 Redis reconnecting...');
+      this.isConnected = false;
+    });
+
+    this.redis.on('end', () => {
+      console.warn('⚠️ Redis connection ended');
+      this.isConnected = false;
+    });
+  }
+
+  scheduleReconnect() {
+    if (this.reconnectTimer || this.connectionAttempts >= this.maxConnectionAttempts) {
+      return;
+    }
+
+    const delay = Math.min(1000 * Math.pow(2, this.connectionAttempts), 10000);
+    console.log(`⏰ Scheduling Redis reconnect in ${delay}ms`);
+    
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.initializeConnection();
+    }, delay);
+  }
+
+  handleConnectionFailure() {
+    this.redis = null;
+    this.isConnected = false;
+    this.scheduleReconnect();
+  }
+
+  isAvailable() {
+    return this.redis && this.isConnected && this.redis.status === 'ready';
+  }
+
+  async executeWithFallback(operation, fallback = null) {
+    if (!this.isAvailable()) {
+      console.warn('⚠️ Redis not available, using fallback');
+      return fallback;
+    }
+
+    this.stats.operations++;
+    
+    try {
+      const result = await Promise.race([
+        operation(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Operation timeout')), 2000)
+        )
+      ]);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Redis operation failed:', error.message);
+      this.stats.errors++;
+      return fallback;
+    }
+  }
+
+  // Cache utility methods
+  async get(key) {
+    const result = await this.executeWithFallback(async () => {
+      console.log(`🔍 Redis GET: ${key}`);
+      const data = await this.redis.get(key);
+      
       if (data) {
-        console.log(`✅ Cache HIT: ${key}`);
+        console.log(`✅ Redis HIT: ${key}`);
+        this.stats.hits++;
         return JSON.parse(data);
       } else {
-        console.log(`❌ Cache MISS: ${key}`);
+        console.log(`❌ Redis MISS: ${key}`);
+        this.stats.misses++;
         return null;
       }
     }, null);
-  },
 
-  // Set data in cache with TTL and validation
+    return result;
+  }
+
   async set(key, data, ttlSeconds = 3600) {
-    if (!data) {
-      console.warn(`⚠️ Attempted to cache null/undefined data for key: ${key}`);
+    if (data === null || data === undefined) {
+      console.warn(`⚠️ Skipping cache of null/undefined data for key: ${key}`);
       return false;
     }
 
-    return withRedisOrFallback(async () => {
-      const client = getRedisClient();
-      console.log(`💾 Cache SET: ${key} (TTL: ${ttlSeconds}s)`);
-      
-      await client.setex(key, ttlSeconds, JSON.stringify(data));
-      console.log(`✅ Cached successfully: ${key}`);
+    return this.executeWithFallback(async () => {
+      console.log(`💾 Redis SET: ${key} (TTL: ${ttlSeconds}s)`);
+      await this.redis.setex(key, ttlSeconds, JSON.stringify(data));
+      console.log(`✅ Redis cached: ${key}`);
       return true;
     }, false);
-  },
+  }
 
-  // Delete from cache
   async del(key) {
-    return withRedisOrFallback(async () => {
-      const client = getRedisClient();
-      console.log(`🗑️ Cache DEL: ${key}`);
-      
-      const result = await client.del(key);
-      console.log(`✅ Deleted ${result} key(s): ${key}`);
+    return this.executeWithFallback(async () => {
+      console.log(`🗑️ Redis DEL: ${key}`);
+      const result = await this.redis.del(key);
+      console.log(`✅ Redis deleted ${result} key(s): ${key}`);
       return result > 0;
     }, false);
-  },
+  }
 
-  // Increment counter with error handling
   async incr(key, amount = 1) {
-    return withRedisOrFallback(async () => {
-      const client = getRedisClient();
-      console.log(`📈 Cache INCR: ${key} by ${amount}`);
-      
-      const result = await client.incrby(key, amount);
-      console.log(`✅ Incremented ${key}: ${result}`);
+    return this.executeWithFallback(async () => {
+      console.log(`📈 Redis INCR: ${key} by ${amount}`);
+      const result = await this.redis.incrby(key, amount);
+      console.log(`✅ Redis incremented ${key}: ${result}`);
       return result;
     }, null);
-  },
+  }
 
-  // Check if key exists
   async exists(key) {
-    return withRedisOrFallback(async () => {
-      const client = getRedisClient();
-      const exists = await client.exists(key);
-      console.log(`🔍 Cache EXISTS ${key}: ${!!exists}`);
+    return this.executeWithFallback(async () => {
+      const exists = await this.redis.exists(key);
+      console.log(`🔍 Redis EXISTS ${key}: ${!!exists}`);
       return !!exists;
     }, false);
-  },
+  }
 
-  // Get multiple keys at once
   async mget(keys) {
-    return withRedisOrFallback(async () => {
-      const client = getRedisClient();
-      console.log(`🔍 Cache MGET: ${keys.length} keys`);
+    return this.executeWithFallback(async () => {
+      console.log(`🔍 Redis MGET: ${keys.length} keys`);
       
-      const results = await client.mget(keys);
+      const results = await this.redis.mget(keys);
       const parsed = results.map((result, index) => {
         try {
           return result ? JSON.parse(result) : null;
@@ -181,23 +229,24 @@ export const cache = {
       });
       
       const hits = parsed.filter(r => r !== null).length;
-      console.log(`✅ Cache MGET: ${hits}/${keys.length} hits`);
+      this.stats.hits += hits;
+      this.stats.misses += (keys.length - hits);
+      
+      console.log(`✅ Redis MGET: ${hits}/${keys.length} hits`);
       return parsed;
     }, keys.map(() => null));
-  },
+  }
 
-  // Set multiple keys at once
   async mset(keyValuePairs, ttlSeconds = 3600) {
     if (!Array.isArray(keyValuePairs) || keyValuePairs.length === 0) {
       console.warn('⚠️ Invalid keyValuePairs for MSET');
       return false;
     }
 
-    return withRedisOrFallback(async () => {
-      const client = getRedisClient();
-      console.log(`💾 Cache MSET: ${keyValuePairs.length} pairs`);
+    return this.executeWithFallback(async () => {
+      console.log(`💾 Redis MSET: ${keyValuePairs.length} pairs`);
       
-      const pipeline = client.pipeline();
+      const pipeline = this.redis.pipeline();
       
       keyValuePairs.forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
@@ -208,62 +257,55 @@ export const cache = {
       const results = await pipeline.exec();
       const successful = results?.filter(([err]) => !err).length || 0;
       
-      console.log(`✅ MSET completed: ${successful}/${keyValuePairs.length} successful`);
+      console.log(`✅ Redis MSET completed: ${successful}/${keyValuePairs.length} successful`);
       return successful === keyValuePairs.length;
     }, false);
-  },
+  }
 
-  // Clear all cache (use with caution)
   async flush() {
-    return withRedisOrFallback(async () => {
-      const client = getRedisClient();
-      console.log('🧹 Flushing all cache...');
-      
-      await client.flushdb();
-      console.log('✅ Cache flushed successfully');
+    return this.executeWithFallback(async () => {
+      console.log('🧹 Flushing Redis cache...');
+      await this.redis.flushdb();
+      console.log('✅ Redis cache flushed');
       return true;
     }, false);
-  },
+  }
 
-  // Get detailed cache statistics
-  async stats() {
-    return withRedisOrFallback(async () => {
-      const client = getRedisClient();
-      const info = await client.info('memory');
-      const dbsize = await client.dbsize();
-      
-      return {
-        connected: redisConnected,
-        status: client.status,
-        keyCount: dbsize,
-        memoryInfo: info,
-        connectionAttempts,
-        isAvailable: isRedisAvailable()
-      };
-    }, {
-      connected: false,
-      status: 'disconnected',
-      keyCount: 0,
-      memoryInfo: '',
-      connectionAttempts,
-      isAvailable: false
-    });
-  },
+  async getStats() {
+    const redisStats = await this.executeWithFallback(async () => {
+      const info = await this.redis.info('memory');
+      const dbsize = await this.redis.dbsize();
+      return { info, dbsize };
+    }, { info: '', dbsize: 0 });
 
-  // Health check
+    return {
+      connected: this.isConnected,
+      status: this.redis?.status || 'disconnected',
+      keyCount: redisStats.dbsize,
+      memoryInfo: redisStats.info,
+      connectionAttempts: this.connectionAttempts,
+      isAvailable: this.isAvailable(),
+      operations: this.stats,
+      performance: {
+        hitRate: this.stats.operations > 0 
+          ? ((this.stats.hits / (this.stats.hits + this.stats.misses)) * 100).toFixed(2) + '%'
+          : '0%'
+      }
+    };
+  }
+
   async healthCheck() {
-    return withRedisOrFallback(async () => {
-      const client = getRedisClient();
+    return this.executeWithFallback(async () => {
       const start = Date.now();
-      await client.ping();
+      await this.redis.ping();
       const latency = Date.now() - start;
       
       console.log(`✅ Redis health check: ${latency}ms`);
       return {
         healthy: true,
         latency,
-        status: client.status,
-        connected: redisConnected
+        status: this.redis.status,
+        connected: this.isConnected
       };
     }, {
       healthy: false,
@@ -273,7 +315,89 @@ export const cache = {
       error: 'Redis not available'
     });
   }
+
+  // Cleanup method
+  async disconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    if (this.redis) {
+      try {
+        await this.redis.quit();
+        console.log('✅ Redis connection closed gracefully');
+      } catch (error) {
+        console.warn('⚠️ Error closing Redis connection:', error.message);
+      }
+    }
+
+    this.redis = null;
+    this.isConnected = false;
+  }
+}
+
+// Create singleton instance
+const redisManager = new RedisManager();
+
+// Cache utility object with enhanced key generation
+export const cache = {
+  keys: {
+    post: (language, heading) => {
+      if (!language || !heading) return null;
+      
+      const normalizedLanguage = language.toLowerCase().trim();
+      const normalizedHeading = heading
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_-]/g, ''); // Remove special characters
+      
+      return `post_${normalizedLanguage}_${normalizedHeading}`;
+    },
+    languagePosts: (language) => `lang_${language.toLowerCase()}_posts`,
+    metadata: 'metadata_all',
+    likes: (postId) => `likes_${postId}`,
+    views: (postId) => `views_${postId}`,
+    user: (userId) => `user_${userId}`,
+  },
+
+  // Delegate all operations to the manager
+  get: (key) => redisManager.get(key),
+  set: (key, data, ttl) => redisManager.set(key, data, ttl),
+  del: (key) => redisManager.del(key),
+  incr: (key, amount) => redisManager.incr(key, amount),
+  exists: (key) => redisManager.exists(key),
+  mget: (keys) => redisManager.mget(keys),
+  mset: (pairs, ttl) => redisManager.mset(pairs, ttl),
+  flush: () => redisManager.flush(),
+  stats: () => redisManager.getStats(),
+  healthCheck: () => redisManager.healthCheck(),
 };
 
-export { isRedisAvailable, withRedisOrFallback };
-export default getRedisClient;
+// Export utility functions
+export const isRedisAvailable = () => redisManager.isAvailable();
+export const withRedisOrFallback = (operation, fallback) => 
+  redisManager.executeWithFallback(operation, fallback);
+
+// Export Redis manager for advanced usage
+export const getRedisClient = () => redisManager.redis;
+
+// Graceful shutdown handler
+if (typeof process !== 'undefined') {
+  const gracefulShutdown = async () => {
+    console.log('🔄 Shutting down Redis connection...');
+    await redisManager.disconnect();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', gracefulShutdown);
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('uncaughtException', async (error) => {
+    console.error('❌ Uncaught exception:', error);
+    await redisManager.disconnect();
+    process.exit(1);
+  });
+}
+
+export default redisManager;
