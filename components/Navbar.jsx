@@ -54,8 +54,8 @@ export default function Navbar() {
           <div className="relative overflow-hidden rounded-xl group-hover:scale-105 transition-transform duration-300">
             <Image
               src='/logo.png'
-              width={100}
-              height={100}
+              width={128}
+              height={99}
               alt="MrDeveloper Logo"
               className="w-11 h-11 sm:w-20 sm:h-11 rounded-xl transition-all duration-300"
               priority
@@ -176,8 +176,8 @@ export default function Navbar() {
             <div className="flex items-center justify-center space-x-2 mb-3">
               <Image
                 src='/logo.png'
-                width={50}
-                height={50}
+                width={128}
+                height={99}
                 alt="Logo"
                 className="rounded-lg opacity-80 shadow-sm"
               />
