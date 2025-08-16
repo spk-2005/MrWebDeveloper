@@ -19,34 +19,7 @@ export const PostsProvider = ({ children }) => {
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Load minimal metadata first (just for listings/navigation)
-  const loadMetadata = useCallback(async () => {
-    if (metadataCache.length > 0) return; // Already loaded
-    
-    console.log('🔄 Loading metadata...');
-    setIsInitialLoading(true);
-    
-    try {
-      const response = await fetch('/api/posts/all?fields=minimal&limit=100', {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-      });
-      
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      const data = await response.json();
-      
-      if (data.success && Array.isArray(data.posts)) {
-        setMetadataCache(data.posts);
-        console.log(`✅ Loaded ${data.posts.length} post metadata`);
-      }
-    } catch (err) {
-      console.error('❌ Failed to load metadata:', err);
-      setError(err.message);
-    } finally {
-      setIsInitialLoading(false);
-    }
-  }, [metadataCache.length]);
+
 
   // Load posts for a specific language (lazy loading)
   const loadLanguagePosts = useCallback(async (language) => {
@@ -125,10 +98,6 @@ export const PostsProvider = ({ children }) => {
     }
   }, [individualPosts]);
 
-  // Initialize metadata on mount
-  useEffect(() => {
-    loadMetadata();
-  }, [loadMetadata]);
 
   // Optimized getPost function with lazy loading
   const getPost = useCallback(async (language, heading) => {
@@ -254,7 +223,6 @@ export const PostsProvider = ({ children }) => {
     searchPosts,
     updatePostLikes,
     clearCache,
-    refreshMetadata: loadMetadata,
     
     // Status
     isEmpty: !isInitialLoading && metadataCache.length === 0,
@@ -275,7 +243,6 @@ export const PostsProvider = ({ children }) => {
     searchPosts,
     updatePostLikes,
     clearCache,
-    loadMetadata,
     languagePosts,
     individualPosts
   ]);
