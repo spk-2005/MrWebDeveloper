@@ -696,7 +696,7 @@ export default function Contentpage({
       
       console.log(`Attempting to ${action} post ${post.id}`);
       
-      const response = await fetch(`/api/posts/${post.id}/like`, {
+      const response = await fetch(`/api/${post.id}/like`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
