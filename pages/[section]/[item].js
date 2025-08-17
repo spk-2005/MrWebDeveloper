@@ -441,11 +441,11 @@ export default function ItemPage() {
 
   // SEO data
   const seoData = useMemo(() => {
-    const defaultTitle = 'CodeLearn - Web Development Tutorials';
+    const defaultTitle = 'MrDeveloper - Web Development Tutorials';
     const defaultDescription = 'Master web development with comprehensive tutorials covering HTML, CSS, JavaScript, and Tailwind CSS.';
     
     if (contentData) {
-      const title = `${activeItem} - ${activeSection} Tutorial | CodeLearn`;
+      const title = `${activeItem} - ${activeSection} Tutorial | MrDeveloper`;
       const description = contentData.description || `Learn ${activeItem} in ${activeSection} with detailed examples and step-by-step explanations.`;
       
       return {

@@ -60,7 +60,7 @@ function HomeContent() {
       name: "Sarah Chen",
       role: "Frontend Developer",
       company: "TechCorp",
-      content: "CodeLearn transformed my career! The structured approach and hands-on examples made complex concepts easy to understand.",
+      content: "MrDeveloper transformed my career! The structured approach and hands-on examples made complex concepts easy to understand.",
       avatar: "👩‍💻",
       rating: 5
     },
@@ -335,7 +335,7 @@ function HomeContent() {
                     Ready to Start Your Journey?
                   </h3>
                   <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
-                    Join thousands of successful developers who chose CodeLearn to master web development. 
+                    Join thousands of successful developers who chose MrDeveloper to master web development. 
                     Your future in tech starts here!
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -404,7 +404,7 @@ export default function Home() {
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "EducationalOrganization",
-              "name": "CodeLearn",
+              "name": "MrDeveloper",
               "description": "Learn web development with comprehensive tutorials",
               "url": "https://www.mrdeveloper.in/",
               "sameAs": [

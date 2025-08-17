@@ -38,7 +38,7 @@ const ShareModal = ({ title, activeSection, activeItem, onClose }) => {
     const emoji = emojis[activeSection] || emojis.default;
     
     const attractiveTexts = [
-      `${emoji} Just mastered "${activeItem}" in ${activeSection}! 🔥\n\nThis tutorial is absolutely mind-blowing! Every developer should check this out 👨‍💻✨\n\n#WebDev #${activeSection} #CodeLearn #Programming`,
+      `${emoji} Just mastered "${activeItem}" in ${activeSection}! 🔥\n\nThis tutorial is absolutely mind-blowing! Every developer should check this out 👨‍💻✨\n\n#WebDev #${activeSection} #MrDeveloper #Programming`,
       
       `🚀 Level up your ${activeSection} skills! 
       
@@ -60,7 +60,7 @@ Just discovered this amazing ${activeSection} tutorial on "${activeItem}" ${emoj
 
 Every ${activeSection} developer needs to see this! 
 
-#CodeLearn #WebDev #${activeSection}`,
+#MrDeveloper #WebDev #${activeSection}`,
 
       `${emoji} Calling all developers! 
 

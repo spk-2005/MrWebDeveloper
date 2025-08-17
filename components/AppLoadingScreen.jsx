@@ -42,7 +42,7 @@ if (typeof window === 'undefined') {
             <Loader2 className="w-16 h-16 text-blue-600 mx-auto animate-spin" />
             <div className="absolute inset-0 w-16 h-16 border-4 border-blue-200 rounded-full mx-auto animate-pulse"></div>
           </div>
-          <h2 className="text-2xl font-bold text-slate-700 mb-2">Initializing CodeLearn</h2>
+          <h2 className="text-2xl font-bold text-slate-700 mb-2">Initializing MrDeveloper</h2>
           <p className="text-slate-500 mb-4">Loading all tutorials for faster experience...</p>
           
           <div className="flex justify-center items-center space-x-4 text-sm text-slate-600">
