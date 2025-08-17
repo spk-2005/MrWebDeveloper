@@ -7,3 +7,4 @@ Host: https://mrdeveloper.in
 
 # Sitemaps
 Sitemap: https://mrdeveloper.in/sitemap.xml
+Sitemap: https://mrdeveloper.in/sitemap-0.xml

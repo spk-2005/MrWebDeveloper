@@ -104,8 +104,63 @@ function HomeContent() {
   }, [testimonials.length]);
   
   return (
+
     <div className={`min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 
                     transition-all duration-500 ${geistSans.variable} ${geistMono.variable}`}>
+     <Head>
+        <meta charSet="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta
+          name="title"
+          content="Mr Developer | Web Development, Coding & Tech Tutorials"
+        />
+        <meta
+          name="description"
+          content="Mr Developer provides tutorials, guides, and resources on web development, coding, and technology. Learn React, Next.js, JavaScript, and more."
+        />
+        <meta
+          name="keywords"
+          content="mr developer, mrdeveloper, mrdeveloper.in, web development, coding, react tutorials, javascript tutorials"
+        />
+        <meta name="author" content="Mr Developer" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://www.mrdeveloper.in/" />
+        <meta
+          property="og:title"
+          content="Mr Developer | Web Development & Coding Tutorials"
+        />
+        <meta
+          property="og:description"
+          content="Learn coding, React, Next.js, and web development with Mr Developer."
+        />
+        <meta
+          property="og:image"
+          content="https://www.mrdeveloper.in/og-image.jpg"
+        />
+
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://www.mrdeveloper.in/" />
+        <meta
+          property="twitter:title"
+          content="Mr Developer | Web Development & Coding Tutorials"
+        />
+        <meta
+          property="twitter:description"
+          content="Learn coding, React, Next.js, and web development with Mr Developer."
+        />
+        <meta
+          property="twitter:image"
+          content="https://www.mrdeveloper.in/og-image.jpg"
+        />
+
+        {/* Favicon */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="canonical" href="https://www.mrdeveloper.in/" />
+     </Head>
+     
       <Navbar />
       <Navbar2
         activeSection={null}
