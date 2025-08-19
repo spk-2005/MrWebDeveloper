@@ -365,8 +365,8 @@ ErrorScreen.displayName = 'ErrorScreen';
 const SidebarToggle = React.memo(({ isSidebarOpen, toggleSidebar }) => (
   <button
     onClick={toggleSidebar}
-    className={`fixed top-20 z-50 bg-white/90 backdrop-blur p-2 rounded-r-lg shadow-lg transition-all duration-300 hover:shadow-xl border border-l-0 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-      isSidebarOpen ? 'left-72' : 'left-0'
+    className={`fixed top-55 z-50 bg-white/90 backdrop-blur p-2 rounded-r-lg shadow-lg transition-all duration-300 hover:shadow-xl border border-l-0 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+      isSidebarOpen ? 'left-73' : 'left-0'
     }`}
     aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
   >
@@ -499,7 +499,7 @@ export default function ItemPage() {
         </div>
 
         {/* Sidebar Toggle */}
-        <SidebarToggle
+        <SidebarToggle className=""
           isSidebarOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
         />

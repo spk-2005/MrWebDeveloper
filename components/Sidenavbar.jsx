@@ -176,7 +176,7 @@ export default function Sidenavbar({
 
         {/* Section Header */}
         <div className="flex-shrink-0">
-          <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 text-center lg:text-left">
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-1 text-center lg:text-left">
             <h3 className="font-bold text-lg text-white tracking-wide">
               {activeSection}
             </h3>
