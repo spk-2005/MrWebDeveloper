@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, ExternalLink, Mail, Phone } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Link, Mail, Phone } from 'lucide-react';
 
 export default function Disclaimer() {
   // SEO Meta data (you would typically set this in your document head)
@@ -161,7 +161,7 @@ export default function Disclaimer() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Changes to This Disclaimer</h2>
               <p className="text-gray-700">
                 We may update this Disclaimer from time to time to reflect changes in our practices or legal requirements. 
-                We will notify users of significant changes by updating the "Last updated" date at the top of this page. 
+                We will notify users of significant changes by updating the &quot;Last updated&quot; date at the top of this page. 
                 Please review this disclaimer periodically.
               </p>
             </section>
@@ -214,9 +214,9 @@ export default function Disclaimer() {
             {/* Footer Note */}
             <div className="text-center pt-6 border-t border-gray-200">
               <p className="text-sm text-gray-500">
-                This disclaimer is part of <strong>MrDeveloper</strong>'s legal documentation. 
-                For more information, visit our <a href="/privacy-policy" className="text-blue-600 hover:underline">Privacy Policy</a> and 
-                <a href="/terms-of-service" className="text-blue-600 hover:underline ml-1">Terms of Service</a>.
+                This disclaimer is part of <strong>MrDeveloper</strong>&apos;s legal documentation. 
+                For more information, visit our <Link href="/privacy-policy" className="text-blue-600 hover:underline">Privacy Policy</Link> and 
+                <Link href="/terms-of-service" className="text-blue-600 hover:underline ml-1">Terms of Service</Link>.
               </p>
             </div>
           </div>

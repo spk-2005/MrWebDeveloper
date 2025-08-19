@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Lock, Eye, Database, Users, Globe, Mail, Phone, FileText, AlertCircle, Cookie, Settings } from 'lucide-react';
+import { Shield, Lock, Eye, Database, Users, Globe, Mail, Phone, FileText, AlertCircle, Cookie, Settings, Link } from 'lucide-react';
 
 export default function PrivacyPolicy() {
   // SEO Meta data
@@ -103,7 +103,7 @@ export default function PrivacyPolicy() {
                   Your Privacy Matters to Us
                 </h2>
                 <p className="text-lg leading-relaxed text-gray-800 mb-4">
-                  This Privacy Policy describes how <strong>MrDeveloper</strong> ("we", "us", or "our") 
+                  This Privacy Policy describes how <strong>MrDeveloper</strong> (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) 
                   collects, uses, and protects your information when you use our educational platform and web development services.
                 </p>
                 <p className="text-gray-700 font-medium">
@@ -410,7 +410,7 @@ export default function PrivacyPolicy() {
 
             {/* Children's Privacy */}
             <section className="mb-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Children's Privacy Protection</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Children&apos;s Privacy Protection</h2>
               
               <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-xl">
                 <p className="text-gray-800 mb-4">
@@ -501,7 +501,7 @@ export default function PrivacyPolicy() {
                 <ul className="text-gray-700 space-y-2">
                   <li className="flex items-start gap-2">
                     <span className="text-green-600 mt-1">✓</span>
-                    Update the "Last updated" date at the top of this policy
+                    Update the &quot;Last updated&quot; date at the top of this policy
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-600 mt-1">✓</span>
@@ -525,7 +525,7 @@ export default function PrivacyPolicy() {
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-xl">
                 <p className="text-gray-700 mb-6">
                   If you have any questions, concerns, or requests regarding this Privacy Policy or our 
-                  data practices, please don't hesitate to contact us:
+                  data practices, please don&apos;t hesitate to contact us:
                 </p>
                 
                 <div className="grid md:grid-cols-3 gap-6">
@@ -583,7 +583,7 @@ export default function PrivacyPolicy() {
                 <div className="mt-8 p-4 bg-white rounded-lg border border-blue-200">
                   <p className="text-sm text-gray-600">
                     <strong>Response Time:</strong> We typically respond to privacy-related inquiries within 
-                    24-48 hours during business days. For urgent privacy matters, please mark your message as "Urgent - Privacy Request".
+                    24-48 hours during business days. For urgent privacy matters, please mark your message as &quot;Urgent - Privacy Request&quot;.
                   </p>
                 </div>
               </div>
@@ -592,21 +592,21 @@ export default function PrivacyPolicy() {
             {/* Footer */}
             <div className="text-center pt-8 border-t border-gray-200">
               <p className="text-sm text-gray-500 mb-4">
-                This Privacy Policy is part of <strong>MrDeveloper</strong>'s commitment to transparency and user privacy.
+                This Privacy Policy is part of <strong>MrDeveloper</strong>&apos;s commitment to transparency and user privacy.
               </p>
               <div className="flex flex-wrap justify-center gap-4 text-sm">
-                <a href="/terms-of-service" className="text-blue-600 hover:underline flex items-center gap-1">
+                <Link href="/terms-of-service" className="text-blue-600 hover:underline flex items-center gap-1">
                   <FileText className="h-4 w-4" />
                   Terms of Service
-                </a>
-                <a href="/disclaimer" className="text-blue-600 hover:underline flex items-center gap-1">
+                </Link>
+                <Link href="/disclaimer" className="text-blue-600 hover:underline flex items-center gap-1">
                   <AlertCircle className="h-4 w-4" />
                   Disclaimer
-                </a>
-                <a href="/contact" className="text-blue-600 hover:underline flex items-center gap-1">
+                </Link>
+                <Link href="/Contact" className="text-blue-600 hover:underline flex items-center gap-1">
                   <Mail className="h-4 w-4" />
                   Contact Us
-                </a>
+                </Link>
               </div>
             </div>
           </div>

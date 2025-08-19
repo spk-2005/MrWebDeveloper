@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Shield, Copyright, AlertCircle, Mail, Phone, ExternalLink } from 'lucide-react';
+import { FileText, Shield, Copyright, AlertCircle, Mail, Phone, ExternalLink, Link } from 'lucide-react';
 
 export default function Terms() {
   // SEO Meta data
@@ -52,7 +52,7 @@ export default function Terms() {
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-6 rounded-xl mb-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-3">Welcome to MrDeveloper</h2>
                 <p className="text-lg leading-relaxed text-gray-800">
-                  Please read these Terms of Service ("Terms", "Terms of Service") carefully before using the 
+                  Please read these Terms of Service (&quot;Terms&quot;, &quot;Terms of Service&quot;) carefully before using the 
                   <strong> MrDeveloper</strong> website and educational services. These terms govern your use of our 
                   web development tutorials, programming courses, and educational content.
                 </p>
@@ -290,7 +290,7 @@ export default function Terms() {
                 We reserve the right to update or change our Terms of Service at any time. When we make changes:
               </p>
               <ul className="list-disc list-inside text-gray-700 space-y-2">
-                <li>We will update the "Last updated" date at the top of this page</li>
+                <li>We will update the &quot;Last updated&quot; date at the top of this page</li>
                 <li>We may notify users via email or website notice for significant changes</li>
                 <li>Continued use of the site constitutes acceptance of the updated terms</li>
                 <li>Previous versions will be archived for reference</li>
@@ -371,7 +371,7 @@ export default function Terms() {
                 <div className="mt-6 p-4 bg-white rounded-lg border border-blue-200">
                   <p className="text-sm text-gray-600">
                     <strong>Response Time:</strong> We typically respond to inquiries within 24-48 hours during business days. 
-                    For urgent matters related to Terms violations, please mark your message as "Urgent - Terms Violation".
+                    For urgent matters related to Terms violations, please mark your message as &quot;Urgent - Terms Violation&quot;.
                   </p>
                 </div>
               </div>
@@ -449,25 +449,25 @@ export default function Terms() {
             {/* Footer Navigation */}
             <div className="text-center pt-8 border-t border-gray-200">
               <p className="text-sm text-gray-500 mb-4">
-                This Terms of Service document is part of <strong>MrDeveloper</strong>'s legal framework.
+                This Terms of Service document is part of <strong>MrDeveloper</strong>&apos;s legal framework.
               </p>
               <div className="flex flex-wrap justify-center gap-4 text-sm">
-                <a href="/privacy-policy" className="text-blue-600 hover:underline flex items-center gap-1">
+                <Link href="/PrivacyPolicy" className="text-blue-600 hover:underline flex items-center gap-1">
                   <Shield className="h-4 w-4" />
                   Privacy Policy
-                </a>
-                <a href="/disclaimer" className="text-blue-600 hover:underline flex items-center gap-1">
+                </Link>
+                <Link href="/Disclaimer" className="text-blue-600 hover:underline flex items-center gap-1">
                   <AlertCircle className="h-4 w-4" />
                   Disclaimer
-                </a>
-                <a href="/contact" className="text-blue-600 hover:underline flex items-center gap-1">
+                </Link>
+                <Link href="/Contact" className="text-blue-600 hover:underline flex items-center gap-1">
                   <Mail className="h-4 w-4" />
                   Contact Us
-                </a>
-                <a href="/" className="text-blue-600 hover:underline flex items-center gap-1">
+                </Link>
+                <Link href="/" className="text-blue-600 hover:underline flex items-center gap-1">
                   <ExternalLink className="h-4 w-4" />
                   Back to Home
-                </a>
+                </Link>
               </div>
               
               <div className="mt-6 p-4 bg-gray-50 rounded-lg">

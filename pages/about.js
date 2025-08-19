@@ -107,13 +107,13 @@ export default function About() {
             <div className="prose prose-lg text-gray-700 max-w-none">
               <p className="text-xl leading-relaxed mb-6">
                 Welcome to <strong>MrDeveloper</strong> — a platform crafted with passion, purpose, 
-                and pixel-perfect precision. I'm <strong>Prasanna Kumar Simhadri</strong>, and this is my 
+                and pixel-perfect precision. I&apos;m <strong>Prasanna Kumar Simhadri</strong>, and this is my 
                 digital playground where technology meets creativity.
               </p>
               
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border border-blue-200">
                 <p className="text-lg text-gray-800 mb-0">
-                  I'm a <strong>Computer Science & Engineering student</strong> specializing in <strong>Data Science</strong>. 
+                  I&apos;m a <strong>Computer Science & Engineering student</strong> specializing in <strong>Data Science</strong>. 
                   Hailing from <strong>Chirala</strong>, I bring a curious mind, a problem-solving attitude, 
                   and a love for turning ideas into interactive, functional web applications that make a difference.
                 </p>
@@ -131,7 +131,7 @@ export default function About() {
             </div>
             
             <p className="text-xl text-gray-700 leading-relaxed mb-8">
-              <strong>MrDeveloper</strong> is more than just a website — it's a comprehensive tech playground 
+              <strong>MrDeveloper</strong> is more than just a website — it&apos;s a comprehensive tech playground 
               and educational platform. From frontend designs to backend integrations, this is where I share 
               my passion, build innovative projects, and connect with like-minded creators and learners.
             </p>
@@ -168,7 +168,7 @@ export default function About() {
             
             <p className="text-xl text-gray-700 leading-relaxed mb-8">
               I work with modern, industry-standard tools and frameworks to build scalable, 
-              performant applications. Here's my current technology arsenal:
+              performant applications. Here&apos;s my current technology arsenal:
             </p>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -189,7 +189,7 @@ export default function About() {
             <div className="mt-8 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Always Learning</h3>
               <p className="text-gray-700">
-                The tech landscape evolves rapidly, and so do I. I'm constantly exploring new technologies, 
+                The tech landscape evolves rapidly, and so do I. I&apos;m constantly exploring new technologies, 
                 frameworks, and best practices to deliver cutting-edge solutions and educational content.
               </p>
             </div>
@@ -224,7 +224,7 @@ export default function About() {
               <p className="text-gray-700">
                 My goal is to demystify web development and make it accessible to everyone, regardless of their background. 
                 Through clear explanations, practical examples, and hands-on projects, I help aspiring developers 
-                build real-world skills that matter in today's tech industry.
+                build real-world skills that matter in today&apos;s tech industry.
               </p>
             </div>
           </div>
@@ -235,12 +235,12 @@ export default function About() {
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-xl p-8 md:p-12 text-white">
             <div className="flex items-center gap-3 mb-6">
               <Heart className="h-8 w-8 text-pink-300" />
-              <h2 className="text-3xl font-bold">📬 Let's Connect & Collaborate</h2>
+              <h2 className="text-3xl font-bold">📬 Let&apos;s Connect & Collaborate</h2>
             </div>
             
             <p className="text-xl text-blue-100 leading-relaxed mb-8">
-              Got feedback, a collaboration idea, or just want to say hi? I'm always excited to connect 
-              with fellow developers, students, and tech enthusiasts. Don't hesitate to reach out!
+              Got feedback, a collaboration idea, or just want to say hi? I&apos;m always excited to connect 
+              with fellow developers, students, and tech enthusiasts. Don&apos;t hesitate to reach out!
             </p>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -293,7 +293,7 @@ export default function About() {
             
             <div className="mt-8 text-center">
               <p className="text-lg text-blue-200 italic">
-                "Thanks for visiting — let's build something amazing together!" 🚀
+                &quot;Thanks for visiting — let&apos;s build something amazing together!&quot; 🚀
               </p>
             </div>
           </div>
