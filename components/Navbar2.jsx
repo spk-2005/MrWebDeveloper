@@ -7,7 +7,7 @@ const sidebarData = {
   'HTML': ['Prerequisites', 'HTML Introduction', 'HTML Elements', 'HTML Attributes', 'HTML Forms'],
   'CSS': ['CSS Basics', 'CSS Selectors', 'CSS Properties', 'CSS Flexbox', 'CSS Grid'],
   'JavaScript': ['JS Introduction', 'Variables', 'Functions', 'DOM Manipulation', 'Events'],
-  'Tailwind': ['Installation', 'Utility Classes', 'Responsive Design', 'Components', 'Customization']
+  'Tailwind CSS': ['Installation', 'Utility Classes', 'Responsive Design', 'Components', 'Customization']
 };
 
 export default function Navbar2({ activeSection }) {
@@ -31,7 +31,7 @@ export default function Navbar2({ activeSection }) {
       icon: Zap,
     },
     {
-      name: 'Tailwind',
+      name: 'Tailwind CSS',
       icon: Wind,
     }
   ];

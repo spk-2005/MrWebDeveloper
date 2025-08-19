@@ -28,7 +28,7 @@ const ShareModal = ({ title, activeSection, activeItem, onClose }) => {
       'HTML': '🌐',
       'CSS': '🎨', 
       'JavaScript': '⚡',
-      'Tailwind': '💨',
+      'Tailwind CSS': '💨',
       'React': '⚛️',
       'Node.js': '🚀',
       'Python': '🐍',
@@ -537,7 +537,7 @@ export default function Contentpage({
       },
       'Events'
     ],
-    'Tailwind': [
+    'Tailwind CSS': [
       'Installation',
       {
         title: 'Utility Classes',

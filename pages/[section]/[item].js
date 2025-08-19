@@ -73,7 +73,7 @@ const SIDEBAR_DATA = {
     },
     'Events'
   ],
-  'Tailwind': [
+  'Tailwind CSS': [
     'Installation',
     {
       title: 'Utility Classes',
