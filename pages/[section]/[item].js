@@ -21,12 +21,13 @@ import {
 
 // Static sidebar data
 const SIDEBAR_DATA = {
+
   'HTML': [
     'Prerequisites',
     'HTML Introduction',
     {
       title: 'HTML Elements',
-      subItems: ['Headings', 'Paragraph', 'HyperLink', 'Image', 'Unordered Lists', 'Ordered Lists', 'div container', 'span', 'br', 'hr']
+      subItems: ['Headings', 'Paragraph', 'HyperLink', 'Image','Unordered Lists','Ordered Lists','div container','span','br','hr']
     },
     {
       title: 'HTML Attributes',
@@ -34,60 +35,25 @@ const SIDEBAR_DATA = {
     },
     {
       title: 'HTML Forms',
-      subItems: [
-        'Input Types', 'Form Attributes', 'Form Validation', 'Form Styling',
-        'Labels and Accessibility', 'Textarea', 'Select Dropdowns',
-        'Checkboxes and Radio Buttons', 'File Uploads', 'Buttons and Submit Types'
+      subItems: [ 
+        'Input Types',
+        'Form Attributes','Form Validation'
       ]
     }
   ],
   'CSS': [
-    'CSS Basics',
-    {
-      title: 'CSS Selectors',
-      subItems: ['Element Selectors', 'Class Selectors', 'ID Selectors', 'Pseudo Selectors']
-    },
-    'CSS Properties',
-    {
-      title: 'CSS Flexbox',
-      subItems: ['Flex Container', 'Flex Items', 'Flex Direction', 'Justify Content']
-    },
-    {
-      title: 'CSS Grid',
-      subItems: ['Grid Container', 'Grid Items', 'Grid Template', 'Grid Areas']
-    }
+    'CSS Basics',{title: 'CSS Selectors',subItems: []}
+    
   ],
   'JavaScript': [
     'JS Introduction',
-    {
-      title: 'Variables',
-      subItems: ['var, let, const', 'Scope', 'Hoisting']
-    },
-    {
-      title: 'Functions',
-      subItems: ['Function Declaration', 'Arrow Functions', 'Closures', 'Callbacks']
-    },
-    {
-      title: 'DOM Manipulation',
-      subItems: ['Selecting Elements', 'Modifying Elements', 'Creating Elements']
-    },
-    'Events'
+    
   ],
   'Tailwind CSS': [
     'Installation',
-    {
-      title: 'Utility Classes',
-      subItems: ['Layout', 'Typography', 'Colors', 'Spacing']
-    },
-    'Responsive Design',
-    {
-      title: 'Components',
-      subItems: ['Buttons', 'Cards', 'Forms', 'Navigation']
-    },
-    'Customization'
+    
   ]
 };
-
 // Utility functions
 const normalizeString = (str) => {
   if (!str) return '';

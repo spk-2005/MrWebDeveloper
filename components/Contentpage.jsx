@@ -455,103 +455,39 @@ export default function Contentpage({
   const error = post === null;
 
   // FIXED: Updated hierarchical sidebar data structure
-  const sidebarData = {
-    'HTML': [
-      'Prerequisites',
-      'HTML Introduction',
-      {
-        title: 'HTML Elements',
-        subItems: [
-          'Headings', 
-          'Paragraph', 
-          'HyperLink', 
-          'Image',
-          'Unordered Lists',
-          'Ordered Lists',
-          'div container',
-          'span',
-          'br',
-          'hr'
-        ]
-      },
-      {
-        title: 'HTML Attributes',
-        subItems: ['Global Attributes', 'Event Attributes', 'Data Attributes']
-      },
-      {
-        title: 'HTML Forms',
-        subItems: [
-          'Input Types',
-          'Form Attributes',
-          'Form Validation',
-          'Form Styling',
-          'Labels and Accessibility',
-          'Textarea',
-          'Select Dropdowns',
-          'Checkboxes and Radio Buttons',
-          'File Uploads',
-          'Buttons and Submit Types',
-          'Fieldsets and Legends',
-          'Placeholder and Default Values',
-          'Required and Optional Fields',
-          'Disabled and Readonly Fields',
-          'Form Action and Method',
-          'Autocomplete and Autofocus',
-          'Hidden Inputs',
-          'Datalist and Suggestion Lists',
-          'Date and Time Inputs',
-          'Range and Number Inputs',
-          'Pattern Matching with Regex'
-        ]
-      }
-    ],
-    'CSS': [
-      'CSS Basics',
-      {
-        title: 'CSS Selectors',
-        subItems: ['Element Selectors', 'Class Selectors', 'ID Selectors', 'Pseudo Selectors']
-      },
-      'CSS Properties',
-      {
-        title: 'CSS Flexbox',
-        subItems: ['Flex Container', 'Flex Items', 'Flex Direction', 'Justify Content']
-      },
-      {
-        title: 'CSS Grid',
-        subItems: ['Grid Container', 'Grid Items', 'Grid Template', 'Grid Areas']
-      }
-    ],
-    'JavaScript': [
-      'JS Introduction',
-      {
-        title: 'Variables',
-        subItems: ['var, let, const', 'Scope', 'Hoisting']
-      },
-      {
-        title: 'Functions',
-        subItems: ['Function Declaration', 'Arrow Functions', 'Closures', 'Callbacks']
-      },
-      {
-        title: 'DOM Manipulation',
-        subItems: ['Selecting Elements', 'Modifying Elements', 'Creating Elements']
-      },
-      'Events'
-    ],
-    'Tailwind CSS': [
-      'Installation',
-      {
-        title: 'Utility Classes',
-        subItems: ['Layout', 'Typography', 'Colors', 'Spacing']
-      },
-      'Responsive Design',
-      {
-        title: 'Components',
-        subItems: ['Buttons', 'Cards', 'Forms', 'Navigation']
-      },
-      'Customization'
-    ]
-  };
-
+const sidebarData = {
+  'HTML': [
+    'Prerequisites',
+    'HTML Introduction',
+    {
+      title: 'HTML Elements',
+      subItems: ['Headings', 'Paragraph', 'HyperLink', 'Image','Unordered Lists','Ordered Lists','div container','span','br','hr']
+    },
+    {
+      title: 'HTML Attributes',
+      subItems: ['Global Attributes', 'Event Attributes', 'Data Attributes']
+    },
+    {
+      title: 'HTML Forms',
+      subItems: [ 
+        'Input Types',
+        'Form Attributes','Form Validation'
+      ]
+    }
+  ],
+  'CSS': [
+    'CSS Basics',{title: 'CSS Selectors',subItems: []}
+    
+  ],
+  'JavaScript': [
+    'JS Introduction',
+    
+  ],
+  'Tailwind CSS': [
+    'Installation',
+    
+  ]
+};
   // FIXED: Improved function to flatten hierarchical structure
   const getFlattenedLessons = useCallback((sectionData) => {
     const lessons = [];

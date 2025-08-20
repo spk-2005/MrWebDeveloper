@@ -23,12 +23,12 @@ const sidebarData = {
       title: 'HTML Forms',
       subItems: [ 
         'Input Types',
-        'Form Attributes'
+        'Form Attributes','Form Validation'
       ]
     }
   ],
   'CSS': [
-    'CSS Basics',
+    'CSS Basics',{title: 'CSS Selectors',subItems: []}
     
   ],
   'JavaScript': [

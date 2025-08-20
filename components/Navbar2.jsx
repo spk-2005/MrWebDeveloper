@@ -4,10 +4,37 @@ import Link from 'next/link';
 
 // Define the sidebar data here so we can access the first item
 const sidebarData = {
-  'HTML': ['Prerequisites', 'HTML Introduction', 'HTML Elements', 'HTML Attributes', 'HTML Forms'],
-  'CSS': ['CSS Basics', 'CSS Selectors', 'CSS Properties', 'CSS Flexbox', 'CSS Grid'],
-  'JavaScript': ['JS Introduction', 'Variables', 'Functions', 'DOM Manipulation', 'Events'],
-  'Tailwind CSS': ['Installation', 'Utility Classes', 'Responsive Design', 'Components', 'Customization']
+  'HTML': [
+    'Prerequisites',
+    'HTML Introduction',
+    {
+      title: 'HTML Elements',
+      subItems: ['Headings', 'Paragraph', 'HyperLink', 'Image','Unordered Lists','Ordered Lists','div container','span','br','hr']
+    },
+    {
+      title: 'HTML Attributes',
+      subItems: ['Global Attributes', 'Event Attributes', 'Data Attributes']
+    },
+    {
+      title: 'HTML Forms',
+      subItems: [ 
+        'Input Types',
+        'Form Attributes','Form Validation'
+      ]
+    }
+  ],
+  'CSS': [
+    'CSS Basics',{title: 'CSS Selectors',subItems: []}
+    
+  ],
+  'JavaScript': [
+    'JS Introduction',
+    
+  ],
+  'Tailwind CSS': [
+    'Installation',
+    
+  ]
 };
 
 export default function Navbar2({ activeSection }) {
