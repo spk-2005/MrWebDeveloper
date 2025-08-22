@@ -471,21 +471,27 @@ const sidebarData = {
       title: 'HTML Forms',
       subItems: [ 
         'Input Types',
-        'Form Attributes','Form Validation'
+        'Form Attributes','Form Validation','Form Styling'
       ]
     }
   ],
   'CSS': [
-    'CSS Basics',{title: 'CSS Selectors',subItems: []}
+    'CSS Basics',{title: 'CSS Selectors',subItems: ['Element Selectors']}
     
   ],
   'JavaScript': [
-    'JS Introduction',
+    'JS Introduction',{
+      title: 'Variables',
+      subItems: []
+    }
     
   ],
   'Tailwind CSS': [
     'Installation',
-    
+	{
+      title: 'Utility Classes',
+      subItems: []
+    },
   ]
 };
   // FIXED: Improved function to flatten hierarchical structure
