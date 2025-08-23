@@ -3,7 +3,9 @@ import { Code, Palette, Zap, Wind } from 'lucide-react';
 import Link from 'next/link';
 
 // Define the sidebar data here so we can access the first item
-const sidebarData = {
+const sidebarData = {'Tech Tips':[
+  'Portfolio'
+],
   'HTML': [
     'Prerequisites',
     'HTML Introduction',
@@ -50,7 +52,10 @@ export default function Navbar2({ activeSection }) {
     setMounted(true);
   }, []);
 
-  const navItems = [
+  const navItems = [   {
+      name: 'Tech Tips',
+      icon: Code,
+    },
     {
       name: 'HTML',
       icon: Code,

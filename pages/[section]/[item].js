@@ -21,7 +21,9 @@ import {
 
 // Static sidebar data
 const SIDEBAR_DATA = {
-
+'Tech Tips':[
+  'Portfolio'
+],
   'HTML': [
     'Prerequisites',
     'HTML Introduction',

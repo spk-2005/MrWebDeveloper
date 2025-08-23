@@ -7,7 +7,9 @@ import {
   X
 } from 'lucide-react';
 
-const sidebarData = {
+const sidebarData = {'Tech Tips':[
+  'Portfolio'
+],
   'HTML': [
     'Prerequisites',
     'HTML Introduction',

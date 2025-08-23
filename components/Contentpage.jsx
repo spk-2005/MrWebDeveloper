@@ -455,7 +455,9 @@ export default function Contentpage({
   const error = post === null;
 
   // FIXED: Updated hierarchical sidebar data structure
-const sidebarData = {
+const sidebarData = {'Tech Tips':[
+  'Portfolio'
+],
   'HTML': [
     'Prerequisites',
     'HTML Introduction',
